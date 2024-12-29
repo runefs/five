@@ -597,7 +597,7 @@ fn generate_context_trait(context_impl: &syn::ItemImpl, module_name: &syn::Ident
     let trait_name = syn::Ident::new(&to_pascal_case(&trait_name_str), module_name.span());
 
     let generics = &context_impl.generics;
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics,_, where_clause) = generics.split_for_impl();
 
     let methods = context_impl
         .items
