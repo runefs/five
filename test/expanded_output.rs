@@ -25,7 +25,7 @@ mod account {
             ledger: TLedgerRole,
             accout_no: i64,
         }
-        impl AccountCtx for Context<TLedgerRole> {
+        impl Context<TLedgerRole> {
             fn deposit(&self, message: &str, amount: i32) {
                 ledger_add(&mut self.ledger, LedgerEntry::Deposit(message, amount))
             }
@@ -37,10 +37,7 @@ mod account {
             fn deposit(&self, message: &str, amount: i32);
             fn withdraw(&self, message: &str, amount: i32);
         }
-        pub fn bind<TLedgerRole>(
-            ledger: TLedgerRole,
-            accout_no: i64,
-        ) -> impl AccountCtx<TLedgerRole>
+        pub fn bind<TLedgerRole>(ledger: TLedgerRole, accout_no: i64) -> impl AccountCtx
         where
             TLedgerRole: LedgerContract,
         {

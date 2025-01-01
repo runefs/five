@@ -597,7 +597,7 @@ fn generate_context_trait(context_impl: &syn::ItemImpl, module_name: &syn::Ident
     let trait_name = syn::Ident::new(&to_pascal_case(&trait_name_str), module_name.span());
 
     let generics = &context_impl.generics;
-    let (impl_generics,_, where_clause) = generics.split_for_impl();
+    let (_impl_generics,_, where_clause) = generics.split_for_impl();
 
     let methods = context_impl
         .items
@@ -613,19 +613,71 @@ fn generate_context_trait(context_impl: &syn::ItemImpl, module_name: &syn::Ident
         .collect::<Vec<_>>();
 
     syn::parse_quote! {
-        pub trait #trait_name #impl_generics #where_clause {
+        pub trait #trait_name #where_clause {
             #(#methods)*
         }
     }
 }
 
-fn ensure_impl_trait(context_impl: &mut syn::ItemImpl, trait_name: &syn::Ident) {
-    // Add the trait to the `impl` block
-    context_impl.trait_ = Some((
-        None,
-        syn::Path::from(trait_name.clone()),
-        Default::default(),
+fn ensure_impl_trait(
+    context_impl: &mut syn::ItemImpl,
+    trait_name: &syn::Ident,
+    context_struct: &syn::ItemStruct,
+) -> syn::ItemImpl {
+    let struct_name = &context_struct.ident;
+
+    // Extract generics and bounds from the context struct
+    let generics = &context_struct.generics;
+    let (_impl_generics, _, _where_clause) = generics.split_for_impl();
+
+    // Map the generics to `GenericArgument` for the `PathSegment.arguments`
+    let generic_arguments: syn::punctuated::Punctuated<_, syn::token::Comma> = generics
+        .params
+        .iter()
+        .filter_map(|param| match param {
+            syn::GenericParam::Type(type_param) => Some(syn::GenericArgument::Type(syn::Type::Path(
+                syn::TypePath {
+                    qself: None,
+                    path: syn::Path::from(type_param.ident.clone()),
+                },
+            ))),
+            syn::GenericParam::Lifetime(lifetime_param) => Some(syn::GenericArgument::Lifetime(
+                lifetime_param.lifetime.clone(),
+            )),
+            _ => None,
+        })
+        .collect();
+
+    // Add the trait implementation to the `impl` block
+    let mut unified_impl = context_impl.clone();
+    unified_impl.trait_ = Some((
+        None, // No `for<>` higher-ranked lifetimes
+        syn::Path::from(trait_name.clone()), // Path to the trait
+        Default::default(), // No `as` tokens
     ));
+
+    // Apply generics and bounds to the `impl` block
+    unified_impl.generics = generics.clone();
+    unified_impl.self_ty = Box::new(syn::Type::Path(syn::TypePath {
+        qself: None,
+        path: syn::Path {
+            leading_colon: None,
+            segments: vec![syn::PathSegment {
+                ident: struct_name.clone(),
+                arguments: syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                    colon2_token: None,
+                    lt_token: Default::default(),
+                    args: generic_arguments, // Corrected to use mapped generic arguments
+                    gt_token: Default::default(),
+                }),
+            }]
+            .into_iter()
+            .collect(),
+        },
+    }));
+
+    // Return the modified `impl` block
+    unified_impl
 }
 
 fn generate_bind_function(
@@ -638,7 +690,7 @@ fn generate_bind_function(
 
     // Extract the generics from the `Context` struct
     let generics = &context_struct.generics;
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, _ty_generics, where_clause) = generics.split_for_impl();
 
     // Collect arguments for the `bind` function
     let args = if let syn::Fields::Named(fields) = &context_struct.fields {
@@ -663,7 +715,7 @@ fn generate_bind_function(
 
     // Generate the `bind` function with generics
     syn::parse_quote! {
-        pub fn bind #impl_generics(#(#args),*) -> impl #trait_name #ty_generics #where_clause {
+        pub fn bind #impl_generics(#(#args),*) -> impl #trait_name #where_clause {
             #struct_name {
                 #(#field_initializers),*
             }
@@ -728,6 +780,7 @@ fn process_module(mut module: ItemMod) -> proc_macro2::TokenStream {
 
         if let Some(ctx) = context_struct {
             if let Some(ctx_impl) = context_impl.take() {
+                
                 let (new_context_struct, new_context_impl) =
                     process_context(ctx, Some(ctx_impl), &roles);
 
@@ -737,7 +790,7 @@ fn process_module(mut module: ItemMod) -> proc_macro2::TokenStream {
                 let context_trait = generate_context_trait(&ctx_impl, module_name);
 
                 // Ensure the `impl` block implements the trait
-                ensure_impl_trait(&mut ctx_impl, &context_trait.ident);
+                ensure_impl_trait(&mut ctx_impl, &context_trait.ident, &new_context_struct);
 
                 // Generate the `bind` function
                 let bind_function = generate_bind_function(&new_context_struct, module_name);
