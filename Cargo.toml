@@ -1,5 +1,4 @@
 [workspace]
 members = [
-    "crate", # Main library crate
-    "test", # Test project
+    "five_core", # Main library crate
 ]
