@@ -1,17 +1,14 @@
+mod data; // Relative path to `tests/mod/data.rs`
+
 #[cfg(test)]
 mod tests {
-    use five_core::analysis::*;
+    use five_core::emit::*;
     use quote::ToTokens;
-    use syn::parse_quote;
+    use crate::data::*;
 
     #[test]
     fn test_analyze_trait_methods() {
-        let item_trait: syn::ItemTrait = syn::parse_quote! {
-            pub trait SourceContract {
-                fn get_balance(&self) -> i32;
-                fn set_balance(&mut self, value: i32);
-            }
-        };
+        let item_trait: syn::ItemTrait = single_contract();
 
         let methods = analyze_trait_methods(&item_trait);
 
@@ -26,7 +23,10 @@ mod tests {
 
                 // Validate `&self`
                 match &params[0] {
-                    ParameterKind::ImmutableReference(ParameterInfo::SelfRef) => {}
+                    ParameterInfo::ImmutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
                     _ => panic!("Expected ImmutableReference(Self) for `&self`"),
                 }
             }
@@ -42,13 +42,16 @@ mod tests {
 
                 // Validate `&mut self`
                 match &params[0] {
-                    ParameterKind::MutableReference(ParameterInfo::SelfRef) => {}
+                    ParameterInfo::MutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
                     _ => panic!("Expected MutableReference(Self) for `&mut self`"),
                 }
 
                 // Validate `value: i32`
                 match &params[1] {
-                    ParameterKind::ByValue(ParameterInfo::Typed { name, ty }) => {
+                    ParameterInfo::Typed { name, ty } => {
                         assert_eq!(name.to_string(), "value");
                         assert_eq!(ty.to_token_stream().to_string(), "i32");
                     }
@@ -60,17 +63,7 @@ mod tests {
     }
     #[test]
     fn test_role_with_contract() {
-        let module: syn::ItemMod = syn::parse_quote! {
-            mod test_module {
-                pub trait SourceContract {
-                    fn get_balance(&self) -> i32;
-                }
-
-                pub trait SourceRole: SourceContract {}
-
-                struct Context{}
-            }
-        };
+        let module: syn::ItemMod = simple_context();
 
         let analysis = analyze_module(&module);
 
@@ -82,48 +75,7 @@ mod tests {
     #[test]
     fn test_analyze_module() {
         // Example `transfer` module as input
-        let transfer_module: syn::ItemMod = parse_quote! {
-            mod transfer {
-                pub trait SourceContract {
-                    fn get_balance(&self) -> i32;
-                    fn set_balance(&mut self, value: i32);
-                }
-
-                pub trait SinkContract {
-                    fn deposit(&mut self, amount: i32);
-                }
-
-                trait SourceRole : SourceContract {
-                    fn withdraw(&mut self, value: i32) {
-                        let balance = self.get_balance();
-                        if value > balance {
-                            panic!("Insufficient funds")
-                        }
-                        println!("Withdrew: {}. New balance is {}", value, self.get_balance());
-                    }
-                }
-
-                trait SinkRole : SinkContract {
-                    fn deposit(&mut self, value: i32) {
-                        let new_balance = self.get_balance() + value;
-                        self.set_balance(new_balance);
-                        println!("Deposited: {}. New balance is {}", value, new_balance);
-                    }
-                }
-
-                pub struct Context {
-                    source: Box<dyn SourceContract>,
-                    sink: Box<dyn SinkContract>,
-                    amount: i32,
-                }
-
-                impl Context {
-                    pub fn transfer(&self) {
-                        self.sink.deposit(self.amount);
-                    }
-                }
-            }
-        };
+        let transfer_module: syn::ItemMod = transfer_context();
 
         // Perform the analysis
         let analysis = analyze_module(&transfer_module);
@@ -148,7 +100,10 @@ mod tests {
 
                 // Validate `&self`
                 match &params[0] {
-                    ParameterKind::ImmutableReference(ParameterInfo::SelfRef) => {}
+                    ParameterInfo::ImmutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
                     _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
                 }
             }
@@ -164,13 +119,16 @@ mod tests {
 
                 // Validate `&mut self`
                 match &params[0] {
-                    ParameterKind::MutableReference(ParameterInfo::SelfRef) => {}
+                    ParameterInfo::MutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
                     _ => panic!("Expected MutableReference(SelfRef) for `&mut self`"),
                 }
 
                 // Validate `value: i32`
                 match &params[1] {
-                    ParameterKind::ByValue(ParameterInfo::Typed { name, ty }) => {
+                    ParameterInfo::Typed { name, ty } => {
                         assert_eq!(name.to_string(), "value");
                         assert_eq!(ty.to_token_stream().to_string(), "i32");
                     }
@@ -193,13 +151,16 @@ mod tests {
 
                 // Validate `&mut self`
                 match &params[0] {
-                    ParameterKind::MutableReference(ParameterInfo::SelfRef) => {}
+                    ParameterInfo::MutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
                     _ => panic!("Expected MutableReference(SelfRef) for `&mut self`"),
                 }
 
                 // Validate `amount: i32`
                 match &params[1] {
-                    ParameterKind::ByValue(ParameterInfo::Typed { name, ty }) => {
+                    ParameterInfo::Typed { name, ty } => {
                         assert_eq!(name.to_string(), "amount");
                         assert_eq!(ty.to_token_stream().to_string(), "i32");
                     }
@@ -224,5 +185,93 @@ mod tests {
             _ => panic!("Expected Other with ItemImpl"),
         };
         assert_eq!(other.self_ty.to_token_stream().to_string(), "Context");
+    }
+    #[test]
+    fn test_analyze_impl_block_with_generics_and_lifetime() {
+        let item_impl: syn::ItemImpl = impl_with_generics();
+
+        // Perform the analysis
+        let impl_info = analyze_impl_block(&item_impl);
+
+        // Validate the type being implemented
+        assert_eq!(
+            impl_info.self_ty.to_token_stream().to_string(),
+            "Context < 'a , T >"
+        );
+
+        // Validate generics
+        assert_eq!(impl_info.generics.get_params().len(), 2); // 'a and T
+        assert!(matches!(
+            impl_info.generics.get_params()[0],
+            syn::GenericParam::Lifetime(_)
+        ));
+        assert!(matches!(
+            impl_info.generics.get_params()[1],
+            syn::GenericParam::Type(_)
+        ));
+
+        // Validate where clause
+        let binding = impl_info.generics.get_where_clause();
+        let where_clause = binding.as_ref().unwrap();
+        assert_eq!(
+            where_clause.predicates.to_token_stream().to_string(),
+            "T : SomeTrait + AnotherTrait"
+        );
+
+        // Validate methods
+        assert_eq!(impl_info.functions.len(), 2);
+
+        // Validate `new`
+        let new_method = &impl_info.functions[0];
+        match new_method {
+            FunctionDescription::Implementation { name, params, generics, .. } => {
+                assert_eq!(name.to_string(), "new");
+                assert_eq!(params.len(), 2); // value: T, data: &'a str
+
+                // Validate `value: T`
+                match &params[0] {
+                    ParameterInfo::Typed { name, ty } => {
+                        assert_eq!(name.to_string(), "value");
+                        assert_eq!(ty.to_token_stream().to_string(), "T");
+                    }
+                    _ => panic!("Expected ByValue for `value`"),
+                }
+
+                // Validate `data: &'a str`
+                match &params[1] {
+                    ParameterInfo::Typed { name, ty } => {
+                        assert_eq!(name.to_string(), "data");
+                        assert_eq!(ty.to_token_stream().to_string(), "& 'a str");
+                    }
+                    _ => panic!("Expected ByValue for `data`"),
+                }
+
+                // Validate generics for the method
+                assert_eq!(generics.get_params().len(), 0); // `new` has no extra generics
+            }
+            _ => panic!("Expected Implementation for `new`"),
+        }
+
+        // Validate `get_data`
+        let get_data_method = &impl_info.functions[1];
+        match get_data_method {
+            FunctionDescription::Implementation { name, params, generics, .. } => {
+                assert_eq!(name.to_string(), "get_data");
+                assert_eq!(params.len(), 1); // Only &self
+
+                // Validate `&self`
+                match &params[0] {
+                    ParameterInfo::ImmutableReference(inner) => match **inner {
+                        ParameterInfo::SelfRef => {}
+                        _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                    },
+                    _ => panic!("Expected ImmutableReference(SelfRef) for `&self`"),
+                }
+
+                // Validate generics for the method
+                assert_eq!(generics.get_params().len(), 0); // `get_data` has no extra generics
+            }
+            _ => panic!("Expected Implementation for `get_data`"),
+        }
     }
 }

@@ -1,20 +1,22 @@
-use quote::ToTokens;
+use syn::Ident;
 
 use super::*;
 
-pub struct CodeAnalysis {
+pub struct ModuleInfo {
+    pub module_name: Ident,
     pub roles: Vec<Role>,
     pub context: ContextInfo,
     pub others: Vec<TypeDescription>,
 }
 
-pub fn analyze_module(module: &syn::ItemMod) -> CodeAnalysis {
+pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
     let mut roles = Vec::new();
     let mut contexts = Vec::new();
     let mut others = Vec::new();
-
+    let module_name = module.ident.clone();
     if let Some((_, items)) = &module.content {
         let mut contracts = Vec::new();
+        let mut impl_blocks_by_type: std::collections::HashMap<String, Vec<syn::ItemImpl>> = std::collections::HashMap::new();
 
         // Separate contracts and roles for association
         for item in items {
@@ -24,12 +26,23 @@ pub fn analyze_module(module: &syn::ItemMod) -> CodeAnalysis {
                         contracts.push(analyze_trait(item_trait));
                     }
                 }
+                syn::Item::Impl(item_impl) => {
+                    // Get the self type of the impl block
+                    if let syn::Type::Path(type_path) = &*item_impl.self_ty {
+                        if let Some(segment) = type_path.path.segments.last() {
+                            let type_name = segment.ident.to_string();
+                            impl_blocks_by_type
+                                .entry(type_name)
+                                .or_default()
+                                .push(item_impl.clone());
+                        }
+                    }
+                }
                 _ => (),
             }
         }
 
         for item in items {
-            print!("Item: {:#?}",item.to_token_stream());
             match item {
                 syn::Item::Trait(item_trait) => {
                     if item_trait.ident.to_string().ends_with("Role") {
@@ -42,11 +55,11 @@ pub fn analyze_module(module: &syn::ItemMod) -> CodeAnalysis {
                             contract.name == syn::Ident::new(&contract_name, contract.name.span())
                         });
 
-                        if let Some(contract) = contract {
+                        if let Some(contract) = contract {  
                             let role = Role {
                                 name: item_trait.ident.clone(),
                                 contract: contract.clone(),
-                                generics: analyze_generics(&item_trait.generics),
+                                generics: analyze_generics(item),
                                 methods: analyze_trait_methods(item_trait),
                             };
                             roles.push(role);
@@ -57,7 +70,11 @@ pub fn analyze_module(module: &syn::ItemMod) -> CodeAnalysis {
                 }
                 syn::Item::Struct(item_struct)=> {
                     if item_struct.ident.to_string() == "Context" {
-                        contexts.push(analyze_context(item_struct));
+                        let impl_blocks = impl_blocks_by_type
+                            .get(&item_struct.ident.to_string())
+                            .cloned()
+                            .unwrap_or_else(Vec::new);
+                        contexts.push(analyze_context(item_struct, &impl_blocks));
                         if contexts.len() != 1 {
                             panic!("There should be exactly one Context struct");
                         }
@@ -73,7 +90,8 @@ pub fn analyze_module(module: &syn::ItemMod) -> CodeAnalysis {
         panic! ("There should be exactly one Context struct. Found {}", contexts.len());
     }
 
-    CodeAnalysis {
+    ModuleInfo {
+        module_name,
         roles, // No independent contracts anymore
         context: contexts[0].clone(),
         others,

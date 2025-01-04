@@ -23,21 +23,27 @@ impl ContextInfo {
     }
 }
 
-pub fn analyze_context(item_struct: &syn::ItemStruct) -> ContextInfo {
-    let generics = analyze_generics(&item_struct.generics);
+pub fn analyze_context(item_struct: &syn::ItemStruct, impl_blocks: &[syn::ItemImpl]) -> ContextInfo {
+    let generics = analyze_generics(&syn::Item::Struct(item_struct.clone()));
     let properties = item_struct
         .fields
         .iter()
         .map(|field| PropertyInfo::new(
             field.ident.clone().unwrap(),
-            field.ty.clone()
+            field.ty.clone(),
         ))
+        .collect();
+
+    // Analyze the provided impl blocks directly
+    let analyzed_impl_blocks = impl_blocks
+        .iter()
+        .map(|impl_block| analyze_impl_block(impl_block))
         .collect();
 
     ContextInfo {
         name: item_struct.ident.clone(),
         generics,
         properties,
-        impl_blocks: Vec::new(),
+        impl_blocks: analyzed_impl_blocks,
     }
 }

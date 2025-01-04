@@ -4,12 +4,12 @@ use syn::{Ident, Block};
 pub enum FunctionDescription {
     Declaration {
         name: Ident,
-        params: Vec<ParameterKind>,
+        params: Vec<ParameterInfo>,
         generics: GenericsInfo,
     },
     Implementation {
         name: Ident,
-        params: Vec<ParameterKind>,
+        params: Vec<ParameterInfo>,
         generics: GenericsInfo,
         body: Block,
     },
@@ -17,7 +17,7 @@ pub enum FunctionDescription {
 impl FunctionDescription {
     pub fn new_declaration(
         name: syn::Ident,
-        params: Vec<ParameterKind>,
+        params: Vec<ParameterInfo>,
         generics: GenericsInfo,
     ) -> Self {
         FunctionDescription::Declaration {
@@ -29,7 +29,7 @@ impl FunctionDescription {
 
     pub fn new_implementation(
         name: syn::Ident,
-        params: Vec<ParameterKind>,
+        params: Vec<ParameterInfo>,
         generics: GenericsInfo,
         body: syn::Block,
     ) -> Self {
@@ -51,7 +51,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                 let params = analyze_parameters(&method.sig);
 
                 // Analyze method generics
-                let generics = analyze_generics(&method.sig.generics);
+                let generics = analyze_generics_from_method(method);
 
                 // Determine if the method has a default implementation
                 if let Some(body) = &method.default {

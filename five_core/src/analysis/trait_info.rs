@@ -1,3 +1,5 @@
+use syn::Item;
+
 use super::*;
 
 #[derive(Clone)]
@@ -21,7 +23,7 @@ impl TraitInfo {
 }
 
 pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
-    let generics = analyze_generics(&item_trait.generics);
+    let generics = analyze_generics(&Item::Trait(item_trait.clone()));
     let functions = item_trait
         .items
         .iter()
@@ -30,7 +32,7 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
                 Some(FunctionDescription::Declaration {
                     name: method.sig.ident.clone(),
                     params: analyze_parameters(&method.sig),
-                    generics: analyze_generics(&method.sig.generics),
+                    generics: analyze_generics_from_method(method),
                 })
             } else {
                 None
