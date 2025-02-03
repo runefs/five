@@ -2,9 +2,9 @@ use syn::Ident;
 
 use super::*;
 
+#[derive(Clone)]
 pub struct ModuleInfo {
     pub module_name: Ident,
-    pub roles: Vec<Role>,
     pub context: ContextInfo,
     pub others: Vec<TypeDescription>,
 }
@@ -80,6 +80,18 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
                         }
                     }
                 }
+                syn::Item::Impl(item_impl) => {
+                    // Check if the `impl` is for the `Context` type
+                    if let syn::Type::Path(type_path) = &*item_impl.self_ty {
+                        if let Some(segment) = type_path.path.segments.last() {
+                            if segment.ident == "Context" {
+                                // Skip adding to `others`
+                                continue;
+                            }
+                        }
+                    }
+                    others.push(TypeDescription::Other(item.clone()));
+                }
                 _ => {
                     others.push(TypeDescription::Other(item.clone()));
                 }
@@ -89,11 +101,12 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
     if contexts.len() != 1 {
         panic! ("There should be exactly one Context struct. Found {}", contexts.len());
     }
+    let mut context = contexts[0].clone();
+    context.roles = roles;
 
     ModuleInfo {
         module_name,
-        roles, // No independent contracts anymore
-        context: contexts[0].clone(),
-        others,
+        context,
+        others
     }
 }

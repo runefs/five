@@ -6,6 +6,7 @@ pub struct ContextInfo {
     pub generics: GenericsInfo,
     pub properties: Vec<PropertyInfo>,
     pub impl_blocks: Vec<ImplBlockInfo>,
+    pub roles: Vec<Role>
 }
 impl ContextInfo {
     pub fn new(
@@ -13,12 +14,14 @@ impl ContextInfo {
         generics: GenericsInfo,
         properties: Vec<PropertyInfo>,
         impl_blocks: Vec<ImplBlockInfo>,
+        roles: Vec<Role>
     ) -> Self {
         ContextInfo {
             name,
             generics,
             properties,
             impl_blocks,
+            roles
         }
     }
 }
@@ -45,5 +48,6 @@ pub fn analyze_context(item_struct: &syn::ItemStruct, impl_blocks: &[syn::ItemIm
         generics,
         properties,
         impl_blocks: analyzed_impl_blocks,
+        roles: vec![]
     }
 }

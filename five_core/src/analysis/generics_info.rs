@@ -1,3 +1,4 @@
+use quote::ToTokens;
 use syn::{GenericParam, Generics, ImplItemFn, TraitItemFn, WhereClause};
 
 #[derive(Clone)]
@@ -19,6 +20,41 @@ impl GenericsInfo {
         self.where_clause.clone()
     }
 
+}
+
+impl ToTokens for GenericsInfo {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        // Only add angle brackets if we have parameters
+        if !self.params.is_empty() {
+            tokens.extend(quote::quote!(<));
+            
+            // Add each parameter with commas between
+            let mut first = true;
+            for param in &self.params {
+                if !first {
+                    tokens.extend(quote::quote!(,));
+                }
+                param.to_tokens(tokens);
+                first = false;
+            }
+            
+            tokens.extend(quote::quote!(>));
+        }
+        
+        // Add where clause if present
+        if let Some(where_clause) = &self.where_clause {
+            where_clause.to_tokens(tokens);
+        }
+    }
+}
+
+impl GenericsInfo {
+    pub fn from_syn_generics(generics: &syn::Generics) -> Self {
+        GenericsInfo {
+            params: generics.params.clone().into_iter().collect(),
+            where_clause: generics.where_clause.clone(),
+        }
+    }
 }
 
 pub fn analyze_generics(item: &syn::Item) -> GenericsInfo{

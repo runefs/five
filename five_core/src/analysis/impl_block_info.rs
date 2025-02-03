@@ -52,11 +52,12 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
             let params = analyze_parameters(&method.sig);
             let generics = analyze_generics_from_impl_method(method);
             let body = method.block.clone();
-
+            
             Some(FunctionDescription::Implementation {
                 name: method.sig.ident.clone(),
                 params,
                 generics,
+                output: method.sig.output.clone(),
                 body,
             })
         } else {

@@ -33,6 +33,7 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
                     name: method.sig.ident.clone(),
                     params: analyze_parameters(&method.sig),
                     generics: analyze_generics_from_method(method),
+                    output: method.sig.output.clone()
                 })
             } else {
                 None

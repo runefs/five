@@ -2,7 +2,8 @@ mod data; // Relative path to `tests/mod/data.rs`
 
 #[cfg(test)]
 mod tests {
-    use five_core::emit::*;
+
+    use five_core::analysis::{analyze_impl_block, analyze_module, analyze_trait_methods, FunctionDescription, ParameterInfo, TypeDescription};
     use quote::ToTokens;
     use crate::data::*;
 
@@ -67,8 +68,8 @@ mod tests {
 
         let analysis = analyze_module(&module);
 
-        assert_eq!(analysis.roles.len(), 1);
-        let role = &analysis.roles[0];
+        assert_eq!(analysis.context.roles.len(), 1);
+        let role = &analysis.context.roles[0];
         assert_eq!(role.name.to_string(), "SourceRole");
         assert_eq!(role.contract.name.to_string(), "SourceContract");
     }
@@ -79,16 +80,14 @@ mod tests {
 
         // Perform the analysis
         let analysis = analyze_module(&transfer_module);
-
         // Validate roles
-        assert_eq!(analysis.roles.len(), 2); // No roles ending in `Role` in the example
+        assert_eq!(analysis.context.roles.len(), 2); // No roles ending in `Role` in the example
         
         // Validate role contracts
-        assert!(analysis.roles.iter().any(|role| role.contract.name.to_string() == "SourceContract"));
-        assert!(analysis.roles.iter().any(|role| role.contract.name.to_string() == "SinkContract"));
-
+        assert!(analysis.context.roles.iter().any(|role| role.contract.name.to_string() == "SourceContract"));
+        assert!(analysis.context.roles.iter().any(|role| role.contract.name.to_string() == "SinkContract"));
         // Validate `SourceContract`
-        let source_role = analysis.roles.iter().find(|role| role.contract.name == "SourceContract").unwrap();
+        let source_role = analysis.context.roles.iter().find(|role| role.contract.name == "SourceContract").unwrap();
         assert_eq!(source_role.contract.functions.len(), 2);
 
         // Validate `get_balance` in `SourceContract`
@@ -139,7 +138,7 @@ mod tests {
         }
 
         // Validate `SinkContract`
-        let sink_role = analysis.roles.iter().find(|role| role.contract.name == "SinkContract").unwrap();
+        let sink_role = analysis.context.roles.iter().find(|role| role.contract.name == "SinkContract").unwrap();
         assert_eq!(sink_role.contract.functions.len(), 1);
 
         // Validate `deposit` in `SinkContract`

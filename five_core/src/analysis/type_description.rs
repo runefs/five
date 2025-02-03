@@ -1,5 +1,6 @@
 use super::*;
-pub enum TypeDescription {
+#[derive(Clone)]
+    pub enum TypeDescription {
     Role(TraitInfo),
     RoleContract(TraitInfo),
     Context(ContextInfo),

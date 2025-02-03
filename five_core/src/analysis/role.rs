@@ -1,5 +1,6 @@
 use super::*;
 
+#[derive(Clone)]
 pub struct Role {
     pub name: syn::Ident,                 // The role's name (e.g., `SourceRole`)
     pub contract: TraitInfo,              // Associated contract (e.g., `SourceContract`)
