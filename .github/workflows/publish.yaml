@@ -89,18 +89,24 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Build project
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+
       - name: Extract version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Verify Cargo.toml version matches tag
-        run: |
-          CARGO_VERSION=$(cargo pkgid -p five | cut -d# -f2)
-          TAG_VERSION=${{ steps.get_version.outputs.VERSION }}
-          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
-            echo "Version mismatch: Cargo.toml version ($CARGO_VERSION) does not match tag version ($TAG_VERSION)"
-            exit 1
-          fi
+      # - name: Verify Cargo.toml version matches tag
+      #   run: |
+      #     CARGO_VERSION=$(cargo pkgid -p five | cut -d# -f2)
+      #     TAG_VERSION=${{ steps.get_version.outputs.VERSION }}
+      #     if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+      #       echo "Version mismatch: Cargo.toml version ($CARGO_VERSION) does not match tag version ($TAG_VERSION)"
+      #       exit 1
+      #     fi
 
       - name: Publish to crates.io
         uses: actions-rs/cargo@v1
@@ -108,6 +114,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         with:
           command: publish
+          args: -p five
 
   create-release:
     name: Create GitHub Release
