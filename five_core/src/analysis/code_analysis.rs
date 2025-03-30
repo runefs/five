@@ -70,7 +70,7 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
                     }
                 }
                 syn::Item::Struct(item_struct) => {
-                    if item_struct.ident.to_string() == "Context" {
+                    if item_struct.ident == "Context" {
                         let impl_blocks = impl_blocks_by_type
                             .get(&item_struct.ident.to_string())
                             .cloned()

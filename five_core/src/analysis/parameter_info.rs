@@ -12,7 +12,7 @@ pub enum ParameterInfo {
         ty: Type,    // Parameter type
     }, // T or self
 }
-impl<'a> ParameterInfo {
+impl ParameterInfo {
     fn inner(&self) -> &ParameterInfo {
         match self {
             ParameterInfo::ImmutableReference(pi) => pi.inner(),
@@ -97,7 +97,7 @@ pub fn analyze_parameters(sig: &syn::Signature) -> Vec<ParameterInfo> {
                         ty: *pat_type.ty.clone(),
                     };
 
-                    let kind = if let Some(_) = pat_ident.by_ref {
+                    let kind = if pat_ident.by_ref.is_some() {
                         if pat_ident.mutability.is_some() {
                             ParameterInfo::MutableReference(Box::new(param_info))
                         } else {

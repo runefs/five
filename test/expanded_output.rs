@@ -12,6 +12,7 @@ mod account {
         fn deposit(&mut self, message: String, amount: i32);
         fn withdraw(&mut self, message: String, amount: i32);
         fn balance(&self) -> i32;
+        fn get_account_no(&self) -> i64;
     }
     pub trait LedgerContract {
         fn push(&mut self, entry: LedgerEntry);
@@ -30,19 +31,23 @@ mod account {
     }
     impl<TLedger: LedgerContract> Account for Context<TLedger> {
         fn deposit(&mut self, message: String, amount: i32) {
-            self.ledger.add(LedgerEntry::Deposit(message, amount))
+            self.ledger_add(LedgerEntry::Deposit(message, amount))
         }
         fn withdraw(&mut self, message: String, amount: i32) {
-            self.ledger.add(LedgerEntry::Withdrawal(message, amount))
+            self.ledger_add(LedgerEntry::Withdrawal(message, amount))
         }
         fn balance(&self) -> i32 {
-            self.ledger_as_vec()
+            self.ledger
+                .as_vec()
                 .iter()
                 .map(|entry| match entry {
                     LedgerEntry::Deposit(_, amount) => *amount,
                     LedgerEntry::Withdrawal(_, amount) => -*amount,
                 })
                 .sum()
+        }
+        fn get_account_no(&self) -> i64 {
+            self.account_no
         }
     }
     pub fn bind<TLedger: LedgerContract>(
@@ -130,13 +135,26 @@ fn main() {
         }
     }
     let ledger = Aa::new();
-    let mut account = account::bind(ledger, 67676555);
     use account::Account;
+    let mut account = account::bind(ledger, 67676555);
     account.deposit(String::from("Deposit 1"), 100);
     account.withdraw(String::from("Withdrawal 1"), 50);
     account.deposit(String::from("Deposit 2"), 200);
     account.withdraw(String::from("Withdrawal 2"), 100);
     {
         ::std::io::_print(format_args!("Balance: {0}\n", account.balance()));
+    };
+    match (&account.balance(), &150) {
+        (left_val, right_val) => {
+            if !(*left_val == *right_val) {
+                let kind = ::core::panicking::AssertKind::Eq;
+                ::core::panicking::assert_failed(
+                    kind,
+                    &*left_val,
+                    &*right_val,
+                    ::core::option::Option::None,
+                );
+            }
+        }
     };
 }

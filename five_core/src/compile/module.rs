@@ -137,7 +137,7 @@ impl Compiled<ModuleInfo> for CompiledModule {
         let params: Vec<ParameterInfo> = field_names
             .iter()
             .zip(field_types.iter())
-            .filter(|(name, _)| name.as_ref().unwrap().to_string() != "self") // Filter out self parameter
+            .filter(|(name, _)| *name.as_ref().unwrap() != "self") // Filter out self parameter
             .map(|(name, ty)| {
                 let param = ParameterInfo::Typed {
                     name: name.as_ref().unwrap().clone(),

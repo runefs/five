@@ -155,7 +155,7 @@ impl ContextInfo {
             roles: &'a HashMap<String, TraitInfo>,
         }
 
-        impl<'a> VisitMut for RoleMethodRewriter<'a> {
+        impl VisitMut for RoleMethodRewriter<'_> {
             fn visit_expr_mut(&mut self, expr: &mut Expr) {
                 if let Expr::MethodCall(method_call) = expr {
                     if let Expr::Field(field_expr) = &*method_call.receiver {
@@ -171,7 +171,7 @@ impl ContextInfo {
                                             let is_role_method = role_trait
                                                 .functions
                                                 .iter()
-                                                .any(|m| m.get_name().to_string() == method_name);
+                                                .any(|m| *m.get_name() == method_name);
 
                                             if !is_role_method {
                                                 // Create the new method name: role_method

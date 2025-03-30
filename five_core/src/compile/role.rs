@@ -67,7 +67,7 @@ impl Role {
             roles: &'a HashMap<String, TraitInfo>,
         }
 
-        impl<'a> VisitMut for SelfRewriter<'a> {
+        impl VisitMut for SelfRewriter<'_> {
             fn visit_expr_mut(&mut self, expr: &mut Expr) {
                 if let Expr::Path(expr_path) = expr {
                     if expr_path.path.is_ident("self") {
@@ -83,7 +83,7 @@ impl Role {
                             if ident == "self" {
                                 let role_trait =
                                     &self.roles[&to_role_name(&self.role_name.to_string())];
-                                if let None = role_trait.functions.iter().find(|m| match m {
+                                if !role_trait.functions.iter().any(|m| match m {
                                     FunctionDescription::Implementation { name, .. } => {
                                         name == &method_call.method
                                     }
@@ -96,7 +96,7 @@ impl Role {
                                         &format!(
                                             "{}_{}",
                                             &to_role_name(&self.role_name.to_string()),
-                                            method_call.method.to_string()
+                                            method_call.method
                                         ),
                                         method_call.method.span(),
                                     );
@@ -145,15 +145,12 @@ impl Role {
                     let mut new_body = body.clone();
                     let mut rewriter = SelfRewriter {
                         role_name: self.name.clone(),
-                        roles: roles,
+                        roles,
                     };
                     rewriter.visit_block_mut(&mut new_body);
 
                     let role_name = to_role_name(&self.name.to_string());
-                    let new_name = syn::Ident::new(
-                        &format!("{}_{}", role_name, name),
-                        name.span(),
-                    );
+                    let new_name = syn::Ident::new(&format!("{}_{}", role_name, name), name.span());
 
                     FunctionDescription::new_implementation(
                         new_name,

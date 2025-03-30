@@ -38,10 +38,7 @@ pub fn analyze_context(
         .collect();
 
     // Analyze the provided impl blocks directly
-    let analyzed_impl_blocks = impl_blocks
-        .iter()
-        .map(|impl_block| analyze_impl_block(impl_block))
-        .collect();
+    let analyzed_impl_blocks = impl_blocks.iter().map(analyze_impl_block).collect();
 
     ContextInfo {
         name: item_struct.ident.clone(),
