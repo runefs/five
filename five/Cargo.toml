@@ -11,7 +11,6 @@ repository.workspace = true
 syn = { version = "2.0", features = ["full", "visit-mut"] }
 quote = "1.0"
 proc-macro2 = "1.0"
-five_core = { workspace = true }
 
 
 [lib]
