@@ -4,11 +4,12 @@ members = [
     "five_core",
     "test"
 ]
+resolver = "2"
 
 [workspace.package]
-version = "0.1.5"
+version = "0.1.0"
 edition = "2021"
-authors = ["runefs"]
+authors = ["Your Name <your.email@example.com>"]
 description = "A rust crate to support DCI natively in rust"
-license = "MIT" 
+license = "MIT"
 repository = "https://github.com/yourusername/five"
