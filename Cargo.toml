@@ -2,3 +2,4 @@
 members = [
     "five_core", "five", "test" # Main library crate
 ]
+resolver = "2"

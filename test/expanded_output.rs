@@ -1,31 +1,3 @@
-Creating bind function...
-Created bind_fn_name
-Creating bind_fn_body with ty_generics: < TLedger >
-field_names: ledger, account_no
-Created context_type Context < TLedger >
-Created bind_fn_body
-Creating return type with trait_name: Account
-Created return_type
-Creating params...
-Field names and types:
-  name: Some(Ident { ident: "ledger", span: #0 bytes(1286..1292) }), type: TLedger
-  name: Some(Ident { ident: "account_no", span: #0 bytes(1315..1325) }), type: i64
-Creating param for name: Some(Ident { ident: "ledger", span: #0 bytes(1286..1292) })
-With type: TLedger
-Created parameter
-Creating param for name: Some(Ident { ident: "account_no", span: #0 bytes(1315..1325) })
-With type: i64
-Created parameter
-Created all params: 2 parameters
-Creating FunctionDescription...
-Compiling bind_fn...
-Emitting bind_fn...
-Creating function signature
-Creating final tokens...
-Creating function signature
-Creating function signature
-Creating function signature
-Creating function signature
 #![feature(prelude_import)]
 #[prelude_import]
 use std::prelude::rust_2021::*;
@@ -37,30 +9,40 @@ mod account {
         account_no: i64,
     }
     pub trait Account {
-        fn deposit(&mut self, message: &str, amount: i32);
-        fn withdraw(&mut self, message: &str, amount: i32);
+        fn deposit(&mut self, message: String, amount: i32);
+        fn withdraw(&mut self, message: String, amount: i32);
+        fn balance(&self) -> i32;
     }
     pub trait LedgerContract {
         fn push(&mut self, entry: LedgerEntry);
         fn as_vec(&self) -> Vec<LedgerEntry>;
     }
     impl<TLedger: LedgerContract> Context<TLedger> {
-        pub fn ledger_add(entry: LedgerEntry) {
+        pub fn ledger_add(&mut self, entry: LedgerEntry) {
             self.ledger.push(entry.clone());
             self.ledger_log(entry.message());
         }
-        pub fn ledger_log(msg: &str) {
+        pub fn ledger_log(&self, msg: String) {
             {
                 ::std::io::_print(format_args!("{0}\n", msg));
             };
         }
     }
     impl<TLedger: LedgerContract> Account for Context<TLedger> {
-        fn deposit(message: &str, amount: i32) {
-            self.ledger_add(LedgerEntry::Deposit(message, amount))
+        fn deposit(&mut self, message: String, amount: i32) {
+            self.ledger.add(LedgerEntry::Deposit(message, amount))
         }
-        fn withdraw(message: &str, amount: i32) {
-            self.ledger_add(LedgerEntry::Withdrawal(message, amount))
+        fn withdraw(&mut self, message: String, amount: i32) {
+            self.ledger.add(LedgerEntry::Withdrawal(message, amount))
+        }
+        fn balance(&self) -> i32 {
+            self.ledger_as_vec()
+                .iter()
+                .map(|entry| match entry {
+                    LedgerEntry::Deposit(_, amount) => *amount,
+                    LedgerEntry::Withdrawal(_, amount) => -*amount,
+                })
+                .sum()
         }
     }
     pub fn bind<TLedger: LedgerContract>(
@@ -72,35 +54,89 @@ mod account {
             account_no: account_no,
         }
     }
-    pub enum LedgerEntry<'a> {
-        Deposit(&'a str, i32),
-        Withdrawal(&'a str, i32),
+    pub enum LedgerEntry {
+        Deposit(String, i32),
+        Withdrawal(String, i32),
     }
-    impl<'a> Clone for LedgerEntry<'a> {
-        fn clone(&self) -> Self {
+    #[automatically_derived]
+    impl ::core::fmt::Debug for LedgerEntry {
+        #[inline]
+        fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
             match self {
-                LedgerEntry::Deposit(msg, amount) => LedgerEntry::Deposit(msg, *amount),
-                LedgerEntry::Withdrawal(msg, amount) => {
-                    LedgerEntry::Withdrawal(msg, *amount)
+                LedgerEntry::Deposit(__self_0, __self_1) => {
+                    ::core::fmt::Formatter::debug_tuple_field2_finish(
+                        f,
+                        "Deposit",
+                        __self_0,
+                        &__self_1,
+                    )
+                }
+                LedgerEntry::Withdrawal(__self_0, __self_1) => {
+                    ::core::fmt::Formatter::debug_tuple_field2_finish(
+                        f,
+                        "Withdrawal",
+                        __self_0,
+                        &__self_1,
+                    )
                 }
             }
         }
     }
-    impl<'a> LedgerEntry<'a> {
-        fn message(&self) -> &str {
+    #[automatically_derived]
+    impl ::core::clone::Clone for LedgerEntry {
+        #[inline]
+        fn clone(&self) -> LedgerEntry {
             match self {
-                LedgerEntry::Deposit(msg, _) => msg,
-                LedgerEntry::Withdrawal(msg, _) => msg,
+                LedgerEntry::Deposit(__self_0, __self_1) => {
+                    LedgerEntry::Deposit(
+                        ::core::clone::Clone::clone(__self_0),
+                        ::core::clone::Clone::clone(__self_1),
+                    )
+                }
+                LedgerEntry::Withdrawal(__self_0, __self_1) => {
+                    LedgerEntry::Withdrawal(
+                        ::core::clone::Clone::clone(__self_0),
+                        ::core::clone::Clone::clone(__self_1),
+                    )
+                }
+            }
+        }
+    }
+    impl LedgerEntry {
+        fn message(&self) -> String {
+            match self {
+                LedgerEntry::Deposit(msg, _) => msg.to_string(),
+                LedgerEntry::Withdrawal(msg, _) => msg.to_string(),
             }
         }
     }
 }
+use account::LedgerContract;
 fn main() {
-    struct Account {
-        balance: i32,
+    struct Aa {
+        vec: Vec<account::LedgerEntry>,
     }
-    let source = Account { balance: 100 };
+    impl Aa {
+        fn new() -> Self {
+            Self { vec: Vec::new() }
+        }
+    }
+    impl LedgerContract for Aa {
+        fn push(&mut self, entry: account::LedgerEntry) {
+            self.vec.push(entry);
+        }
+        fn as_vec(&self) -> Vec<account::LedgerEntry> {
+            self.vec.clone()
+        }
+    }
+    let ledger = Aa::new();
+    let mut account = account::bind(ledger, 67676555);
+    use account::Account;
+    account.deposit(String::from("Deposit 1"), 100);
+    account.withdraw(String::from("Withdrawal 1"), 50);
+    account.deposit(String::from("Deposit 2"), 200);
+    account.withdraw(String::from("Withdrawal 2"), 100);
     {
-        ::std::io::_print(format_args!("Balance: {0}\n", source.balance));
+        ::std::io::_print(format_args!("Balance: {0}\n", account.balance()));
     };
 }
