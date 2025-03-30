@@ -35,7 +35,7 @@ pub fn to_snake_case(pascal_case: &str) -> String {
                // Check if previous char wasn't an underscore
                !result.ends_with('_') &&
                // Check if next char isn't uppercase (handles acronyms like "HTTP")
-               !(chars.peek().map_or(false, |next| next.is_uppercase()))
+               !(chars.peek().is_some_and(|next| next.is_uppercase()))
             {
                 result.push('_');
             }
