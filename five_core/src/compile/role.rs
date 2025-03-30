@@ -151,7 +151,7 @@ impl Role {
 
                     let role_name = to_role_name(&self.name.to_string());
                     let new_name = syn::Ident::new(
-                        &format!("{}_{}", role_name, name.to_string()),
+                        &format!("{}_{}", role_name, name),
                         name.span(),
                     );
 

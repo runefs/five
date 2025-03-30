@@ -52,5 +52,8 @@ pub mod account {
                 })
                 .sum()
         }
+        fn get_account_no(&self) -> i64 {
+            self.account_no
+        }
     }
 }
