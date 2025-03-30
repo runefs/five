@@ -6,7 +6,7 @@ pub struct ContextInfo {
     pub generics: GenericsInfo,
     pub properties: Vec<PropertyInfo>,
     pub impl_blocks: Vec<ImplBlockInfo>,
-    pub roles: Vec<Role>
+    pub roles: Vec<Role>,
 }
 impl ContextInfo {
     pub fn new(
@@ -14,27 +14,27 @@ impl ContextInfo {
         generics: GenericsInfo,
         properties: Vec<PropertyInfo>,
         impl_blocks: Vec<ImplBlockInfo>,
-        roles: Vec<Role>
+        roles: Vec<Role>,
     ) -> Self {
         ContextInfo {
             name,
             generics,
             properties,
             impl_blocks,
-            roles
+            roles,
         }
     }
 }
 
-pub fn analyze_context(item_struct: &syn::ItemStruct, impl_blocks: &[syn::ItemImpl]) -> ContextInfo {
+pub fn analyze_context(
+    item_struct: &syn::ItemStruct,
+    impl_blocks: &[syn::ItemImpl],
+) -> ContextInfo {
     let generics = analyze_generics(&syn::Item::Struct(item_struct.clone()));
     let properties = item_struct
         .fields
         .iter()
-        .map(|field| PropertyInfo::new(
-            field.ident.clone().unwrap(),
-            field.ty.clone(),
-        ))
+        .map(|field| PropertyInfo::new(field.ident.clone().unwrap(), field.ty.clone()))
         .collect();
 
     // Analyze the provided impl blocks directly
@@ -48,6 +48,6 @@ pub fn analyze_context(item_struct: &syn::ItemStruct, impl_blocks: &[syn::ItemIm
         generics,
         properties,
         impl_blocks: analyzed_impl_blocks,
-        roles: vec![]
+        roles: vec![],
     }
 }

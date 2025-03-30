@@ -6,7 +6,7 @@ pub enum FunctionDescription {
         name: Ident,
         params: Vec<ParameterInfo>,
         generics: GenericsInfo,
-        output: ReturnType
+        output: ReturnType,
     },
     Implementation {
         name: Ident,
@@ -17,42 +17,67 @@ pub enum FunctionDescription {
     },
 }
 impl FunctionDescription {
-    pub  fn get_name(&self) -> &Ident{
+    pub fn get_name(&self) -> &Ident {
         match self {
-            Self::Declaration { name,.. } => name,
-            Self::Implementation { name,.. } => name
+            Self::Declaration { name, .. } => name,
+            Self::Implementation { name, .. } => name,
         }
     }
-    pub  fn get_params(&self) -> &Vec<ParameterInfo> {
+    pub fn get_params(&self) -> &Vec<ParameterInfo> {
         match self {
-            Self::Declaration { name:_,params,.. } => params,
-            Self::Implementation { name:_,params,.. } => params,
+            Self::Declaration {
+                name: _, params, ..
+            } => params,
+            Self::Implementation {
+                name: _, params, ..
+            } => params,
         }
     }
-    pub  fn get_generics(&self) -> &GenericsInfo{
+    pub fn get_generics(&self) -> &GenericsInfo {
         match self {
-            Self::Declaration { name:_, params: _, generics,.. } => generics,
-            Self::Implementation { name:_, params: _,generics,.. } => generics,
+            Self::Declaration {
+                name: _,
+                params: _,
+                generics,
+                ..
+            } => generics,
+            Self::Implementation {
+                name: _,
+                params: _,
+                generics,
+                ..
+            } => generics,
         }
     }
-    pub  fn get_output(&self) -> &ReturnType{
+    pub fn get_output(&self) -> &ReturnType {
         match self {
-            Self::Declaration { name:_, params: _, generics: _ ,output } => output,
-            Self::Implementation { name:_, params: _,generics: _ ,output,.. } => output,
+            Self::Declaration {
+                name: _,
+                params: _,
+                generics: _,
+                output,
+            } => output,
+            Self::Implementation {
+                name: _,
+                params: _,
+                generics: _,
+                output,
+                ..
+            } => output,
         }
     }
-    
+
     pub fn new_declaration(
         name: syn::Ident,
         params: Vec<ParameterInfo>,
         generics: GenericsInfo,
-        output: ReturnType
+        output: ReturnType,
     ) -> Self {
         FunctionDescription::Declaration {
             name,
             params,
             generics,
-            output
+            output,
         }
     }
 
@@ -60,7 +85,7 @@ impl FunctionDescription {
         name: syn::Ident,
         params: Vec<ParameterInfo>,
         generics: GenericsInfo,
-        output: ReturnType, 
+        output: ReturnType,
         body: syn::Block,
     ) -> Self {
         FunctionDescription::Implementation {
@@ -98,7 +123,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                         name: method.sig.ident.clone(),
                         params,
                         generics,
-                        output
+                        output,
                     })
                 }
             } else {

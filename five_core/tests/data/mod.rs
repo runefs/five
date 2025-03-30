@@ -1,6 +1,6 @@
 use syn::{ItemImpl, ItemMod, ItemTrait};
 
-pub(crate) fn single_contract() -> ItemTrait { 
+pub(crate) fn single_contract() -> ItemTrait {
     syn::parse_quote! {
         pub trait SourceContract {
             fn get_balance(&self) -> i32;
@@ -8,8 +8,6 @@ pub(crate) fn single_contract() -> ItemTrait {
         }
     }
 }
-
-
 
 pub(crate) fn simple_context() -> ItemMod {
     syn::parse_quote! {

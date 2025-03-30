@@ -1,4 +1,4 @@
-use syn::{Ident,Type};
+use syn::{Ident, Type};
 
 #[derive(Clone)]
 pub struct PropertyInfo {

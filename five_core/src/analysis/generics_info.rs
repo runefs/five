@@ -7,11 +7,11 @@ pub struct GenericsInfo {
     where_clause: Option<WhereClause>,
 }
 impl GenericsInfo {
-    pub fn new(
-        params: Vec<syn::GenericParam>,
-        where_clause: Option<syn::WhereClause>,
-    ) -> Self {
-        GenericsInfo { params, where_clause }
+    pub fn new(params: Vec<syn::GenericParam>, where_clause: Option<syn::WhereClause>) -> Self {
+        GenericsInfo {
+            params,
+            where_clause,
+        }
     }
     pub fn get_params(&self) -> Vec<GenericParam> {
         self.params.clone()
@@ -19,7 +19,6 @@ impl GenericsInfo {
     pub fn get_where_clause(&self) -> Option<WhereClause> {
         self.where_clause.clone()
     }
-
 }
 
 impl ToTokens for GenericsInfo {
@@ -27,7 +26,7 @@ impl ToTokens for GenericsInfo {
         // Only add angle brackets if we have parameters
         if !self.params.is_empty() {
             tokens.extend(quote::quote!(<));
-            
+
             // Add each parameter with commas between
             let mut first = true;
             for param in &self.params {
@@ -37,10 +36,10 @@ impl ToTokens for GenericsInfo {
                 param.to_tokens(tokens);
                 first = false;
             }
-            
+
             tokens.extend(quote::quote!(>));
         }
-        
+
         // Add where clause if present
         if let Some(where_clause) = &self.where_clause {
             where_clause.to_tokens(tokens);
@@ -57,25 +56,29 @@ impl GenericsInfo {
     }
 }
 
-pub fn analyze_generics(item: &syn::Item) -> GenericsInfo{
-  if let (Some(generics),where_clause) = extract_inline_where_clauses(item) {
-    analyze_generics_(generics, where_clause)
-  } else {
-    GenericsInfo {
-        params: Vec::new(),
-        where_clause: None
+pub fn analyze_generics(item: &syn::Item) -> GenericsInfo {
+    if let (Some(generics), where_clause) = extract_inline_where_clauses(item) {
+        analyze_generics_(generics, where_clause)
+    } else {
+        GenericsInfo {
+            params: Vec::new(),
+            where_clause: None,
+        }
     }
-  }    
 }
 pub fn analyze_generics_from_method(method: &TraitItemFn) -> GenericsInfo {
-    analyze_generics_(&method.sig.generics,extract_inline_where_clauses_from_signature(&method.sig))
+    analyze_generics_(
+        &method.sig.generics,
+        extract_inline_where_clauses_from_signature(&method.sig),
+    )
 }
 
 pub fn analyze_generics_from_impl_method(method: &ImplItemFn) -> GenericsInfo {
-    analyze_generics_(&method.sig.generics,extract_inline_where_clauses_from_signature(&method.sig))
+    analyze_generics_(
+        &method.sig.generics,
+        extract_inline_where_clauses_from_signature(&method.sig),
+    )
 }
-
-
 
 fn analyze_generics_(
     generics: &syn::Generics,
@@ -111,11 +114,17 @@ fn merge_where_clause(
     }
 }
 
-fn extract_inline_where_clauses(item: &syn::Item) -> (Option<&Generics>,Vec<syn::WherePredicate>) {
+fn extract_inline_where_clauses(item: &syn::Item) -> (Option<&Generics>, Vec<syn::WherePredicate>) {
     match item {
-        syn::Item::Impl(item_impl) => (Some(&item_impl.generics),extract_inline_where_clauses_from_impl(item_impl)),
-        syn::Item::Trait(item_trait) => (Some(&item_trait.generics),extract_inline_where_clauses_from_trait(item_trait)),
-        _ => (None,Vec::new()),
+        syn::Item::Impl(item_impl) => (
+            Some(&item_impl.generics),
+            extract_inline_where_clauses_from_impl(item_impl),
+        ),
+        syn::Item::Trait(item_trait) => (
+            Some(&item_trait.generics),
+            extract_inline_where_clauses_from_trait(item_trait),
+        ),
+        _ => (None, Vec::new()),
     }
 }
 
@@ -150,7 +159,9 @@ fn extract_inline_where_clauses_from_impl(item_impl: &syn::ItemImpl) -> Vec<syn:
     where_clauses
 }
 
-fn extract_inline_where_clauses_from_trait(item_trait: &syn::ItemTrait) -> Vec<syn::WherePredicate> {
+fn extract_inline_where_clauses_from_trait(
+    item_trait: &syn::ItemTrait,
+) -> Vec<syn::WherePredicate> {
     item_trait
         .generics
         .params
@@ -173,7 +184,9 @@ fn extract_inline_where_clauses_from_trait(item_trait: &syn::ItemTrait) -> Vec<s
         .collect()
 }
 
-pub fn extract_inline_where_clauses_from_signature(sig: &syn::Signature) -> Vec<syn::WherePredicate> {
+pub fn extract_inline_where_clauses_from_signature(
+    sig: &syn::Signature,
+) -> Vec<syn::WherePredicate> {
     sig.generics
         .params
         .iter()

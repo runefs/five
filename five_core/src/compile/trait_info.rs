@@ -1,7 +1,7 @@
 use quote::ToTokens;
 
-use crate::analysis::{FunctionDescription, TraitInfo};
 use super::{Compiled, Compiler};
+use crate::analysis::{FunctionDescription, TraitInfo};
 
 #[derive(Clone)]
 pub struct CompiledTraitInfo {
@@ -19,32 +19,41 @@ impl Compiled<TraitInfo> for CompiledTraitInfo {
         self.to_token_stream()
     }
 }
- 
+
 impl Compiler<TraitInfo> for TraitInfo {
     fn compile(&self) -> CompiledTraitInfo {
-        let functions = self.functions.iter().map(|f| {
-            match f {
-                FunctionDescription::Declaration { name, params, generics, output } => {
-                    let param_tokens = params.iter().map(|p| p.to_token_stream());
-                    let generic_params = generics.get_params();
-                    let where_clause = generics.get_where_clause();
-                    
-                    // Only add angle brackets if we have generic parameters
-                    let generic_tokens = if !generic_params.is_empty() {
-                        quote::quote!(<#(#generic_params),*>)
-                    } else {
-                        quote::quote!()
-                    };
-                    
-                    syn::parse_quote! {
-                        fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+        let functions = self
+            .functions
+            .iter()
+            .map(|f| {
+                match f {
+                    FunctionDescription::Declaration {
+                        name,
+                        params,
+                        generics,
+                        output,
+                    } => {
+                        let param_tokens = params.iter().map(|p| p.to_token_stream());
+                        let generic_params = generics.get_params();
+                        let where_clause = generics.get_where_clause();
+
+                        // Only add angle brackets if we have generic parameters
+                        let generic_tokens = if !generic_params.is_empty() {
+                            quote::quote!(<#(#generic_params),*>)
+                        } else {
+                            quote::quote!()
+                        };
+
+                        syn::parse_quote! {
+                            fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                        }
                     }
-                },
-                FunctionDescription::Implementation { .. } => {
-                    panic!("Trait should only contain declarations")
+                    FunctionDescription::Implementation { .. } => {
+                        panic!("Trait should only contain declarations")
+                    }
                 }
-            }
-        }).collect::<Vec<syn::TraitItem>>();
+            })
+            .collect::<Vec<syn::TraitItem>>();
 
         let trait_item = syn::ItemTrait {
             attrs: vec![],
@@ -61,10 +70,8 @@ impl Compiler<TraitInfo> for TraitInfo {
             restriction: None,
         };
 
-        CompiledTraitInfo {
-            trait_item
-        }
+        CompiledTraitInfo { trait_item }
     }
-    
+
     type Output = CompiledTraitInfo;
 }

@@ -7,7 +7,7 @@ pub struct ImplBlockInfo {
     pub for_lifetimes: Option<syn::Lifetime>,
     pub implemented_traits: Vec<syn::Path>,
     pub functions: Vec<FunctionDescription>,
-    pub self_ty: Type
+    pub self_ty: Type,
 }
 impl ImplBlockInfo {
     pub fn new(
@@ -15,14 +15,14 @@ impl ImplBlockInfo {
         for_lifetimes: Option<syn::Lifetime>,
         implemented_traits: Vec<syn::Path>,
         functions: Vec<FunctionDescription>,
-        self_ty: Type
+        self_ty: Type,
     ) -> Self {
         ImplBlockInfo {
             generics,
             for_lifetimes,
             implemented_traits,
             functions,
-            self_ty
+            self_ty,
         }
     }
 }
@@ -40,31 +40,40 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
     });
 
     // Analyze implemented traits
-    let implemented_traits = item_impl.trait_.as_ref().map_or(Vec::new(), |(_, path, _)| vec![path.clone()]);
+    let implemented_traits = item_impl
+        .trait_
+        .as_ref()
+        .map_or(Vec::new(), |(_, path, _)| vec![path.clone()]);
 
     // Analyze methods in the impl block
     // Analyze methods in the impl block
     let functions = item_impl
-    .items
-    .iter()
-    .filter_map(|item| {
-        if let syn::ImplItem::Fn(method) = item {
-            let params = analyze_parameters(&method.sig);
-            let generics = analyze_generics_from_impl_method(method);
-            let body = method.block.clone();
-            
-            Some(FunctionDescription::Implementation {
-                name: method.sig.ident.clone(),
-                params,
-                generics,
-                output: method.sig.output.clone(),
-                body,
-            })
-        } else {
-            None
-        }
-    })
-    .collect();
+        .items
+        .iter()
+        .filter_map(|item| {
+            if let syn::ImplItem::Fn(method) = item {
+                let params = analyze_parameters(&method.sig);
+                let generics = analyze_generics_from_impl_method(method);
+                let body = method.block.clone();
+
+                Some(FunctionDescription::Implementation {
+                    name: method.sig.ident.clone(),
+                    params,
+                    generics,
+                    output: method.sig.output.clone(),
+                    body,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
     // Create and return the ImplBlockInfo
-    ImplBlockInfo::new(generics, for_lifetimes, implemented_traits, functions, self_ty)
+    ImplBlockInfo::new(
+        generics,
+        for_lifetimes,
+        implemented_traits,
+        functions,
+        self_ty,
+    )
 }

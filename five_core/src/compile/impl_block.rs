@@ -1,4 +1,3 @@
-
 use crate::analysis::{GenericsInfo, ImplBlockInfo};
 
 use super::{function_descriptor::CompiledFunctionDescription, Compiled, Compiler};
@@ -9,13 +8,13 @@ pub struct CompiledImplBlock {
     pub for_lifetimes: Option<syn::Lifetime>,
     pub implemented_traits: Vec<syn::Path>,
     pub functions: Vec<CompiledFunctionDescription>,
-    pub self_ty: syn::Type
+    pub self_ty: syn::Type,
 }
 
 impl Compiled<ImplBlockInfo> for CompiledImplBlock {
     fn emit(&self) -> proc_macro2::TokenStream {
         use quote::quote;
-        
+
         let functions = self.functions.iter().map(|func| {
             // If we're implementing a trait, strip the pub modifier
             if !self.implemented_traits.is_empty() {
@@ -29,17 +28,15 @@ impl Compiled<ImplBlockInfo> for CompiledImplBlock {
 
         let impl_generics = &self.generics.get_params();
         let impl_where = &self.generics.get_where_clause();
-        
+
         // Split the generic parameters into just the type parameters without bounds
-        let type_params = impl_generics.iter().map(|param| {
-            match param {
-                syn::GenericParam::Type(t) => &t.ident,
-                _ => panic!("Unexpected generic parameter type")
-            }
+        let type_params = impl_generics.iter().map(|param| match param {
+            syn::GenericParam::Type(t) => &t.ident,
+            _ => panic!("Unexpected generic parameter type"),
         });
-        
+
         // Only add angle brackets if we have generic parameters
-        let impl_generic_tokens = if !impl_generics.is_empty(){
+        let impl_generic_tokens = if !impl_generics.is_empty() {
             quote!(<#(#impl_generics),*>)
         } else {
             quote!()
@@ -58,7 +55,7 @@ impl Compiled<ImplBlockInfo> for CompiledImplBlock {
         } else {
             quote!()
         };
-        
+
         quote! {
             impl #impl_generic_tokens #impl_trait Context #type_generic_tokens #impl_where {
                 #(#functions)*
@@ -77,6 +74,6 @@ impl Compiler<ImplBlockInfo> for ImplBlockInfo {
             self_ty: self.self_ty.clone(),
         }
     }
-    
+
     type Output = CompiledImplBlock;
 }

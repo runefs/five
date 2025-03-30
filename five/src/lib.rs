@@ -1,4 +1,7 @@
-use five_core::{analysis::analyze_module, compile::{Compiled, Compiler}};
+use five_core::{
+    analysis::analyze_module,
+    compile::{Compiled, Compiler},
+};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, ItemMod};
 

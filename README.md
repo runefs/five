@@ -99,7 +99,3 @@ If you need help or have questions:
 1. Check existing [issues](https://github.com/owner/five/issues)
 2. Create a new issue for questions or problems
 3. For security issues, please see our security policy
-
-## License
-
-[Insert your license information here]

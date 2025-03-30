@@ -16,7 +16,8 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
     let module_name = module.ident.clone();
     if let Some((_, items)) = &module.content {
         let mut contracts = Vec::new();
-        let mut impl_blocks_by_type: std::collections::HashMap<String, Vec<syn::ItemImpl>> = std::collections::HashMap::new();
+        let mut impl_blocks_by_type: std::collections::HashMap<String, Vec<syn::ItemImpl>> =
+            std::collections::HashMap::new();
 
         // Separate contracts and roles for association
         for item in items {
@@ -47,15 +48,15 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
                 syn::Item::Trait(item_trait) => {
                     if item_trait.ident.to_string().ends_with("Role") {
                         let role_name = item_trait.ident.to_string();
-                        let contract_name = role_name.strip_suffix("Role").unwrap_or("").to_string()
-                            + "Contract";
+                        let contract_name =
+                            role_name.strip_suffix("Role").unwrap_or("").to_string() + "Contract";
 
                         // Find the matching contract
                         let contract = contracts.iter().find(|contract| {
                             contract.name == syn::Ident::new(&contract_name, contract.name.span())
                         });
 
-                        if let Some(contract) = contract {  
+                        if let Some(contract) = contract {
                             let role = Role {
                                 name: item_trait.ident.clone(),
                                 contract: contract.clone(),
@@ -68,7 +69,7 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
                         }
                     }
                 }
-                syn::Item::Struct(item_struct)=> {
+                syn::Item::Struct(item_struct) => {
                     if item_struct.ident.to_string() == "Context" {
                         let impl_blocks = impl_blocks_by_type
                             .get(&item_struct.ident.to_string())
@@ -99,7 +100,10 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
         }
     }
     if contexts.len() != 1 {
-        panic! ("There should be exactly one Context struct. Found {}", contexts.len());
+        panic!(
+            "There should be exactly one Context struct. Found {}",
+            contexts.len()
+        );
     }
     let mut context = contexts[0].clone();
     context.roles = roles;
@@ -107,6 +111,6 @@ pub fn analyze_module(module: &syn::ItemMod) -> ModuleInfo {
     ModuleInfo {
         module_name,
         context,
-        others
+        others,
     }
 }

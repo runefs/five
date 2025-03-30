@@ -1,5 +1,5 @@
-use syn::{Ident, Lifetime, Type};
 use quote::ToTokens;
+use syn::{Ident, Lifetime, Type};
 
 #[derive(Clone)]
 pub enum ParameterInfo {
@@ -10,35 +10,23 @@ pub enum ParameterInfo {
     Typed {
         name: Ident, // Parameter name
         ty: Type,    // Parameter type
-    },               // T or self
+    }, // T or self
 }
 impl<'a> ParameterInfo {
     fn inner(&self) -> &ParameterInfo {
         match self {
-            ParameterInfo::ImmutableReference(pi) => {
-                pi.inner()
-            },
-            ParameterInfo::MutableReference(pi) => {
-                pi.inner()
-            },
-            ParameterInfo::SelfRef => {
-                self
-            },
-            ParameterInfo::Typed { name: _, ty: _ } => {
-                self
-            },
-            ParameterInfo::LifeTime(..) => panic!("Recursive Lifetime should not happen")
+            ParameterInfo::ImmutableReference(pi) => pi.inner(),
+            ParameterInfo::MutableReference(pi) => pi.inner(),
+            ParameterInfo::SelfRef => self,
+            ParameterInfo::Typed { name: _, ty: _ } => self,
+            ParameterInfo::LifeTime(..) => panic!("Recursive Lifetime should not happen"),
         }
     }
     pub fn name(&self) -> String {
         match self.inner() {
-            ParameterInfo::SelfRef => {
-                "self".to_string()
-            },
-            ParameterInfo::Typed { name, ty: _ } => {
-                name.to_string()
-            },
-            _ => panic!("Should have been removed in inner()")
+            ParameterInfo::SelfRef => "self".to_string(),
+            ParameterInfo::Typed { name, ty: _ } => name.to_string(),
+            _ => panic!("Should have been removed in inner()"),
         }
     }
 
@@ -49,8 +37,14 @@ impl<'a> ParameterInfo {
     pub fn get_self_type(&self) -> SelfType {
         match self {
             ParameterInfo::SelfRef => SelfType::Value,
-            ParameterInfo::ImmutableReference(inner) if matches!(**inner, ParameterInfo::SelfRef) => SelfType::Reference,
-            ParameterInfo::MutableReference(inner) if matches!(**inner, ParameterInfo::SelfRef) => SelfType::MutableReference,
+            ParameterInfo::ImmutableReference(inner)
+                if matches!(**inner, ParameterInfo::SelfRef) =>
+            {
+                SelfType::Reference
+            }
+            ParameterInfo::MutableReference(inner) if matches!(**inner, ParameterInfo::SelfRef) => {
+                SelfType::MutableReference
+            }
             _ => panic!("Called get_self_type on non-self parameter"),
         }
     }
@@ -131,9 +125,7 @@ pub enum SelfType {
 impl ToTokens for ParameterInfo {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            ParameterInfo::SelfRef => {
-                tokens.extend(quote::quote!(self))
-            }
+            ParameterInfo::SelfRef => tokens.extend(quote::quote!(self)),
             ParameterInfo::ImmutableReference(inner) => {
                 tokens.extend(quote::quote!(&));
                 inner.to_tokens(tokens);

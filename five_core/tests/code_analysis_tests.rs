@@ -3,9 +3,12 @@ mod data; // Relative path to `tests/mod/data.rs`
 #[cfg(test)]
 mod tests {
 
-    use five_core::analysis::{analyze_impl_block, analyze_module, analyze_trait_methods, FunctionDescription, ParameterInfo, TypeDescription};
-    use quote::ToTokens;
     use crate::data::*;
+    use five_core::analysis::{
+        analyze_impl_block, analyze_module, analyze_trait_methods, FunctionDescription,
+        ParameterInfo, TypeDescription,
+    };
+    use quote::ToTokens;
 
     #[test]
     fn test_analyze_trait_methods() {
@@ -82,12 +85,25 @@ mod tests {
         let analysis = analyze_module(&transfer_module);
         // Validate roles
         assert_eq!(analysis.context.roles.len(), 2); // No roles ending in `Role` in the example
-        
+
         // Validate role contracts
-        assert!(analysis.context.roles.iter().any(|role| role.contract.name.to_string() == "SourceContract"));
-        assert!(analysis.context.roles.iter().any(|role| role.contract.name.to_string() == "SinkContract"));
+        assert!(analysis
+            .context
+            .roles
+            .iter()
+            .any(|role| role.contract.name.to_string() == "SourceContract"));
+        assert!(analysis
+            .context
+            .roles
+            .iter()
+            .any(|role| role.contract.name.to_string() == "SinkContract"));
         // Validate `SourceContract`
-        let source_role = analysis.context.roles.iter().find(|role| role.contract.name == "SourceContract").unwrap();
+        let source_role = analysis
+            .context
+            .roles
+            .iter()
+            .find(|role| role.contract.name == "SourceContract")
+            .unwrap();
         assert_eq!(source_role.contract.functions.len(), 2);
 
         // Validate `get_balance` in `SourceContract`
@@ -138,7 +154,12 @@ mod tests {
         }
 
         // Validate `SinkContract`
-        let sink_role = analysis.context.roles.iter().find(|role| role.contract.name == "SinkContract").unwrap();
+        let sink_role = analysis
+            .context
+            .roles
+            .iter()
+            .find(|role| role.contract.name == "SinkContract")
+            .unwrap();
         assert_eq!(sink_role.contract.functions.len(), 1);
 
         // Validate `deposit` in `SinkContract`
@@ -173,9 +194,18 @@ mod tests {
         let context = analysis.context;
         assert_eq!(context.name.to_string(), "Context");
         assert_eq!(context.properties.len(), 3);
-        assert!(context.properties.iter().any(|prop| prop.get_name() == "source"));
-        assert!(context.properties.iter().any(|prop| prop.get_name() == "sink"));
-        assert!(context.properties.iter().any(|prop| prop.get_name() == "amount"));
+        assert!(context
+            .properties
+            .iter()
+            .any(|prop| prop.get_name() == "source"));
+        assert!(context
+            .properties
+            .iter()
+            .any(|prop| prop.get_name() == "sink"));
+        assert!(context
+            .properties
+            .iter()
+            .any(|prop| prop.get_name() == "amount"));
 
         // Validate other items
         assert_eq!(analysis.others.len(), 1); // The `impl Context` block
@@ -223,7 +253,12 @@ mod tests {
         // Validate `new`
         let new_method = &impl_info.functions[0];
         match new_method {
-            FunctionDescription::Implementation { name, params, generics, .. } => {
+            FunctionDescription::Implementation {
+                name,
+                params,
+                generics,
+                ..
+            } => {
                 assert_eq!(name.to_string(), "new");
                 assert_eq!(params.len(), 2); // value: T, data: &'a str
 
@@ -254,7 +289,12 @@ mod tests {
         // Validate `get_data`
         let get_data_method = &impl_info.functions[1];
         match get_data_method {
-            FunctionDescription::Implementation { name, params, generics, .. } => {
+            FunctionDescription::Implementation {
+                name,
+                params,
+                generics,
+                ..
+            } => {
                 assert_eq!(name.to_string(), "get_data");
                 assert_eq!(params.len(), 1); // Only &self
 

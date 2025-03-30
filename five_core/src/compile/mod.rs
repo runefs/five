@@ -1,12 +1,11 @@
+mod compiler;
 mod context;
+mod function_descriptor;
+mod impl_block;
 mod module;
 mod role;
-mod compiler;
-mod impl_block;
 mod trait_info;
-mod function_descriptor;
 
-
-pub use impl_block::*;
 pub use compiler::*;
+pub use impl_block::*;
 pub use trait_info::*;

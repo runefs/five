@@ -11,7 +11,7 @@ pub enum CompiledFunctionDescription {
         name: Ident,
         params: Vec<ParameterInfo>,
         generics: GenericsInfo,
-        output: ReturnType
+        output: ReturnType,
     },
     Implementation {
         name: Ident,
@@ -25,17 +25,22 @@ pub enum CompiledFunctionDescription {
 impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
     fn emit(&self) -> proc_macro2::TokenStream {
         use quote::quote;
-        
+
         match self {
-            CompiledFunctionDescription::Implementation { name, params, generics, output, body } => {
+            CompiledFunctionDescription::Implementation {
+                name,
+                params,
+                generics,
+                output,
+                body,
+            } => {
                 // Convert parameters to TokenStream
                 let mut inputs = syn::punctuated::Punctuated::new();
-                
+
                 // Split params into self and non-self parameters
-                let (self_param, other_params): (Vec<_>, Vec<_>) = params
-                    .iter()
-                    .partition(|p| p.is_self());
-                
+                let (self_param, other_params): (Vec<_>, Vec<_>) =
+                    params.iter().partition(|p| p.is_self());
+
                 // Add self parameter first if it exists
                 if let Some(self_param) = self_param.first() {
                     let tokens = self_param.to_token_stream();
@@ -43,7 +48,7 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
                     inputs.push_value(arg);
                     inputs.push_punct(syn::Token![,](proc_macro2::Span::call_site()));
                 }
-                
+
                 // Add remaining parameters
                 for param in other_params {
                     let tokens = param.to_token_stream();
@@ -77,9 +82,7 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
 
                 quote!(#item_fn)
             }
-            CompiledFunctionDescription::Declaration { .. } => {
-                proc_macro2::TokenStream::new()
-            }
+            CompiledFunctionDescription::Declaration { .. } => proc_macro2::TokenStream::new(),
         }
     }
 }
@@ -87,23 +90,30 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
 impl Compiler<CompiledFunctionDescription> for FunctionDescription {
     fn compile(&self) -> CompiledFunctionDescription {
         match self {
-            FunctionDescription::Declaration { name, params, generics, output } => {
-                CompiledFunctionDescription::Declaration {
-                    name: name.clone(),
-                    params: params.clone(),
-                    generics: generics.clone(),
-                    output: output.clone()
-                }
+            FunctionDescription::Declaration {
+                name,
+                params,
+                generics,
+                output,
+            } => CompiledFunctionDescription::Declaration {
+                name: name.clone(),
+                params: params.clone(),
+                generics: generics.clone(),
+                output: output.clone(),
             },
-            FunctionDescription::Implementation { name, params, generics, output, body } => {
-                CompiledFunctionDescription::Implementation {
-                    name: name.clone(),
-                    params: params.clone(),
-                    generics: generics.clone(),
-                    output: output.clone(),
-                    body: body.clone()
-                }
-            }
+            FunctionDescription::Implementation {
+                name,
+                params,
+                generics,
+                output,
+                body,
+            } => CompiledFunctionDescription::Implementation {
+                name: name.clone(),
+                params: params.clone(),
+                generics: generics.clone(),
+                output: output.clone(),
+                body: body.clone(),
+            },
         }
     }
 

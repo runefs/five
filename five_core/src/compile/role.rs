@@ -1,25 +1,25 @@
 use std::collections::HashMap;
 
+use super::{Compiled, CompiledImplBlock, CompiledTraitInfo, Compiler};
 use crate::analysis::{FunctionDescription, ImplBlockInfo, Role, TraitInfo};
-use super::{CompiledTraitInfo, Compiled, CompiledImplBlock, Compiler};
 use syn::{visit_mut::VisitMut, Expr};
 
 #[derive(Clone)]
 pub struct CompiledRole {
     pub impl_block: CompiledImplBlock,
-    pub contract: CompiledTraitInfo
+    pub contract: CompiledTraitInfo,
 }
 
 impl Compiled<Role> for CompiledRole {
     fn emit(&self) -> proc_macro2::TokenStream {
         use quote::quote;
-        
+
         let impl_block = self.impl_block.emit();
         let contract = &self.contract;
-        
+
         quote! {
             pub #contract
-            
+
             #impl_block
         }
     }
@@ -28,12 +28,12 @@ impl Compiled<Role> for CompiledRole {
 pub fn to_snake_case(pascal_case: &str) -> String {
     let mut result = String::new();
     let mut chars = pascal_case.chars().peekable();
-    
+
     while let Some(current) = chars.next() {
         if current.is_uppercase() {
-            if !result.is_empty() && 
+            if !result.is_empty() &&
                // Check if previous char wasn't an underscore
-               !result.ends_with('_') && 
+               !result.ends_with('_') &&
                // Check if next char isn't uppercase (handles acronyms like "HTTP")
                !(chars.peek().map_or(false, |next| next.is_uppercase()))
             {
@@ -44,7 +44,7 @@ pub fn to_snake_case(pascal_case: &str) -> String {
             result.push(current);
         }
     }
-    
+
     result
 }
 
@@ -60,7 +60,7 @@ pub(crate) fn to_role_name(trait_name: &str) -> String {
 impl Role {
     pub fn compile(&self, roles: &HashMap<String, TraitInfo>) -> CompiledRole {
         let context_ty = syn::parse_str::<syn::Type>("Context_").unwrap();
-        
+
         // Create a visitor to rewrite self to self.{role_name}
         struct SelfRewriter<'a> {
             role_name: syn::Ident,
@@ -74,24 +74,23 @@ impl Role {
                         let role_name = to_role_name(&self.role_name.to_string());
                         let role_ident = syn::Ident::new(&role_name, self.role_name.span());
                         *expr = syn::parse_quote!(self.#role_ident);
-                        return; 
+                        return;
                     }
                 }
                 if let Expr::MethodCall(method_call) = expr {
-                    
                     if let Expr::Path(base_path) = &*method_call.receiver {
                         if let Some(ident) = base_path.path.get_ident() {
                             if ident == "self" {
-                                let role_trait = &self.roles[&to_role_name(&self.role_name.to_string())];
-                                if let None = role_trait.functions.iter()
-                                    .find(|m| match m {
-                                        FunctionDescription::Implementation { name, .. } => {
-                                            name == &method_call.method
-                                        },
-                                        FunctionDescription::Declaration { name, .. } => {
-                                            name == &method_call.method
-                                        },
-                                    }) {
+                                let role_trait =
+                                    &self.roles[&to_role_name(&self.role_name.to_string())];
+                                if let None = role_trait.functions.iter().find(|m| match m {
+                                    FunctionDescription::Implementation { name, .. } => {
+                                        name == &method_call.method
+                                    }
+                                    FunctionDescription::Declaration { name, .. } => {
+                                        name == &method_call.method
+                                    }
+                                }) {
                                     // Create the new method name: role_method
                                     let new_method_name = syn::Ident::new(
                                         &format!(
@@ -99,9 +98,9 @@ impl Role {
                                             &to_role_name(&self.role_name.to_string()),
                                             method_call.method.to_string()
                                         ),
-                                        method_call.method.span()
+                                        method_call.method.span(),
                                     );
-                                    
+
                                     // Create new method call with the same arguments
                                     let new_expr = Expr::MethodCall(syn::ExprMethodCall {
                                         attrs: method_call.attrs.clone(),
@@ -116,7 +115,7 @@ impl Role {
                                         paren_token: method_call.paren_token,
                                         args: method_call.args.clone(),
                                     });
-                                    
+
                                     *expr = new_expr;
                                     return;
                                 }
@@ -132,22 +131,30 @@ impl Role {
         let contract = self.contract.compile();
 
         // Rewrite methods to access self.{role_name}
-        let functions = self.methods.iter().map(|func| {
-            match func {
-                FunctionDescription::Implementation { name, params, generics, output, body } => {
+        let functions = self
+            .methods
+            .iter()
+            .map(|func| match func {
+                FunctionDescription::Implementation {
+                    name,
+                    params,
+                    generics,
+                    output,
+                    body,
+                } => {
                     let mut new_body = body.clone();
-                    let mut rewriter = SelfRewriter { 
+                    let mut rewriter = SelfRewriter {
                         role_name: self.name.clone(),
                         roles: roles,
                     };
                     rewriter.visit_block_mut(&mut new_body);
-                    
+
                     let role_name = to_role_name(&self.name.to_string());
                     let new_name = syn::Ident::new(
                         &format!("{}_{}", role_name, name.to_string()),
-                        name.span()
+                        name.span(),
                     );
-                    
+
                     FunctionDescription::new_implementation(
                         new_name,
                         params.clone(),
@@ -155,10 +162,10 @@ impl Role {
                         output.clone(),
                         new_body,
                     )
-                },
+                }
                 decl => decl.clone(),
-            }
-        }).collect();
+            })
+            .collect();
 
         let impl_block = ImplBlockInfo {
             self_ty: context_ty,
@@ -170,7 +177,7 @@ impl Role {
 
         CompiledRole {
             impl_block: impl_block.compile(),
-            contract
+            contract,
         }
     }
 }
