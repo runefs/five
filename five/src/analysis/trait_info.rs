@@ -8,6 +8,7 @@ pub struct TraitInfo {
     pub generics: GenericsInfo,
     pub functions: Vec<FunctionDescription>,
 }
+#[allow(dead_code)]
 impl TraitInfo {
     pub fn new(
         name: syn::Ident,

@@ -5,6 +5,7 @@ use crate::analysis::{FunctionDescription, GenericsInfo, ParameterInfo};
 
 use super::{Compiled, Compiler};
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub enum CompiledFunctionDescription {
     Declaration {

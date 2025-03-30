@@ -1,7 +1,9 @@
-use five_core::{
-    analysis::analyze_module,
-    compile::{Compiled, Compiler},
-};
+mod analysis;
+mod compile;
+
+use crate::analysis::analyze_module;
+use crate::compile::{Compiled, Compiler};
+
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, ItemMod};
 

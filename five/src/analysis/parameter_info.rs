@@ -1,6 +1,7 @@
 use quote::ToTokens;
 use syn::{Ident, Lifetime, Type};
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub enum ParameterInfo {
     SelfRef,                                // Represents `self`, `&self`, or `&mut self`
@@ -12,6 +13,7 @@ pub enum ParameterInfo {
         ty: Type,    // Parameter type
     }, // T or self
 }
+#[allow(dead_code)]
 impl ParameterInfo {
     fn inner(&self) -> &ParameterInfo {
         match self {
@@ -114,7 +116,7 @@ pub fn analyze_parameters(sig: &syn::Signature) -> Vec<ParameterInfo> {
         })
         .collect()
 }
-
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum SelfType {
     Value,

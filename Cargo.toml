@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "five",
-    "five_core",
     "test"
 ]
 resolver = "2"
