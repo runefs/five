@@ -13,3 +13,6 @@ authors = ["Your Name <your.email@example.com>"]
 description = "A rust crate to support DCI natively in rust"
 license = "MIT"
 repository = "https://github.com/yourusername/five"
+
+[workspace.dependencies]
+five_core = { path = "five_core" }
