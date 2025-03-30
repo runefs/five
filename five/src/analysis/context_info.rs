@@ -1,5 +1,5 @@
 use super::*;
-
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct ContextInfo {
     pub name: syn::Ident,
@@ -8,6 +8,7 @@ pub struct ContextInfo {
     pub impl_blocks: Vec<ImplBlockInfo>,
     pub roles: Vec<Role>,
 }
+#[allow(dead_code)]
 impl ContextInfo {
     pub fn new(
         name: syn::Ident,

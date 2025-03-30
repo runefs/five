@@ -2,6 +2,7 @@ use crate::analysis::{GenericsInfo, ImplBlockInfo};
 
 use super::{function_descriptor::CompiledFunctionDescription, Compiled, Compiler};
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CompiledImplBlock {
     pub generics: GenericsInfo,

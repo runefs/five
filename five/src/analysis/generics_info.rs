@@ -6,6 +6,7 @@ pub struct GenericsInfo {
     params: Vec<GenericParam>,
     where_clause: Option<WhereClause>,
 }
+#[allow(dead_code)]
 impl GenericsInfo {
     pub fn new(params: Vec<syn::GenericParam>, where_clause: Option<syn::WhereClause>) -> Self {
         GenericsInfo {

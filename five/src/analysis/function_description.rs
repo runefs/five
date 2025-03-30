@@ -16,6 +16,7 @@ pub enum FunctionDescription {
         body: Block,
     },
 }
+#[allow(dead_code)]
 impl FunctionDescription {
     pub fn get_name(&self) -> &Ident {
         match self {
