@@ -15,4 +15,4 @@ license = "MIT"
 repository = "https://github.com/yourusername/five"
 
 [workspace.dependencies]
-five_core = { path = "five_core" }
+five_core = { version = "0.1.0", path = "five_core" }
