@@ -1,4 +1,5 @@
 mod account;
+mod storage;
 use account::LedgerContract;
 
 fn main() {
