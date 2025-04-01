@@ -7,20 +7,7 @@ pub struct TraitInfo {
     pub name: syn::Ident,
     pub generics: GenericsInfo,
     pub functions: Vec<FunctionDescription>,
-}
-#[allow(dead_code)]
-impl TraitInfo {
-    pub fn new(
-        name: syn::Ident,
-        generics: GenericsInfo,
-        functions: Vec<FunctionDescription>,
-    ) -> Self {
-        TraitInfo {
-            name,
-            generics,
-            functions,
-        }
-    }
+    pub attrs: Vec<syn::Attribute>,
 }
 
 pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
@@ -38,6 +25,7 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
                     generics: analyze_generics_from_method(method),
                     output,
                     asyncness: method.sig.asyncness.clone(),
+                    attrs: method.attrs.clone(),
                 })
             } else {
                 None
@@ -49,5 +37,6 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
         name: item_trait.ident.clone(),
         generics,
         functions,
+        attrs: item_trait.attrs.clone(),
     }
 }

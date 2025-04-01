@@ -33,6 +33,7 @@ impl Compiler<TraitInfo> for TraitInfo {
                         generics,
                         output,
                         asyncness,
+                        attrs,
                     } => {
                         let param_tokens = params.iter().map(|p| p.to_token_stream());
                         let generic_params = generics.get_params();
@@ -48,10 +49,12 @@ impl Compiler<TraitInfo> for TraitInfo {
                         // Add async keyword if needed
                         if asyncness.is_some() {
                             syn::parse_quote! {
+                                #(#attrs)*
                                 async fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
                             }
                         } else {
                             syn::parse_quote! {
+                                #(#attrs)*
                                 fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
                             }
                         }
@@ -64,7 +67,7 @@ impl Compiler<TraitInfo> for TraitInfo {
             .collect::<Vec<syn::TraitItem>>();
 
         let trait_item = syn::ItemTrait {
-            attrs: vec![],
+            attrs: self.attrs.clone(),
             vis: syn::Visibility::Inherited,
             unsafety: None,
             auto_token: None,

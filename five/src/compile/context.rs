@@ -243,6 +243,7 @@ impl ContextInfo {
                         output,
                         body,
                         asyncness,
+                        attrs,
                     } => {
                         let mut body = body.clone();
                         self.rewrite_role_access(roles_map, &mut body);
@@ -254,6 +255,7 @@ impl ContextInfo {
                             output.clone(),
                             body,
                             asyncness.clone(),
+                            attrs.clone()
                         )
                     }
                     f => f.clone(),

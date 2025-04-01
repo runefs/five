@@ -155,6 +155,7 @@ impl Compiled<ModuleInfo> for CompiledModule {
             return_type,
             bind_fn_body,
             None,
+            vec![],
         );
 
         let bind_fn = bind_fn.compile();

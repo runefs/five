@@ -14,6 +14,7 @@ pub enum CompiledFunctionDescription {
         generics: GenericsInfo,
         output: ReturnType,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     },
     Implementation {
         name: Ident,
@@ -22,6 +23,7 @@ pub enum CompiledFunctionDescription {
         output: ReturnType,
         body: Option<Block>,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     },
 }
 
@@ -37,6 +39,7 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
                 output,
                 body,
                 asyncness,
+                attrs,
             } => {
                 // Convert parameters to TokenStream
                 let mut inputs = syn::punctuated::Punctuated::new();
@@ -78,7 +81,7 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
 
                 // Create the function item
                 let item_fn = syn::ItemFn {
-                    attrs: vec![],
+                    attrs: attrs.clone(),
                     vis: syn::Visibility::Public(syn::token::Pub::default()),
                     sig,
                     block: Box::new(body.clone().unwrap_or_else(|| syn::Block {
@@ -103,12 +106,14 @@ impl Compiler<CompiledFunctionDescription> for FunctionDescription {
                 generics,
                 output,
                 asyncness,
+                attrs,
             } => CompiledFunctionDescription::Declaration {
                 name: name.clone(),
                 params: params.clone(),
                 generics: generics.clone(),
                 output: output.clone(),
                 asyncness: asyncness.clone(),
+                attrs: attrs.clone(),
             },
             FunctionDescription::Implementation {
                 name,
@@ -117,6 +122,7 @@ impl Compiler<CompiledFunctionDescription> for FunctionDescription {
                 output,
                 body,
                 asyncness,
+                attrs,
             } => CompiledFunctionDescription::Implementation {
                 name: name.clone(),
                 params: params.clone(),
@@ -124,6 +130,7 @@ impl Compiler<CompiledFunctionDescription> for FunctionDescription {
                 output: output.clone(),
                 body: Some(body.clone()),
                 asyncness: asyncness.clone(),
+                attrs: attrs.clone(),
             },
         }
     }

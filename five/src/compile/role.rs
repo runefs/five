@@ -1,11 +1,9 @@
-use proc_macro2::TokenStream;
-use quote::ToTokens;
 use std::collections::HashMap;
-use syn::{visit_mut::VisitMut, Block, Expr, ImplItemFn, Member};
+use syn::{visit_mut::VisitMut, Expr};
 
 use super::{Compiled, CompiledImplBlock, CompiledTraitInfo, Compiler};
 use crate::analysis::{
-    FunctionDescription, GenericsInfo, ImplBlockInfo, ParameterInfo, Role, TraitInfo,
+    FunctionDescription, ImplBlockInfo, ParameterInfo, Role, TraitInfo,
 };
 
 #[derive(Clone)]
@@ -146,6 +144,7 @@ impl Role {
                     output,
                     body,
                     asyncness,
+                    attrs,
                 } => {
                     let mut new_body = body.clone();
                     let mut rewriter = SelfRewriter {
@@ -173,6 +172,7 @@ impl Role {
                         output.clone(),
                         new_body,
                         asyncness.clone(),
+                        attrs.clone(),
                     )
                 }
                 decl => decl.clone(),

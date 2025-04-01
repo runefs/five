@@ -62,6 +62,7 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
                     output: method.sig.output.clone(),
                     body,
                     asyncness: method.sig.asyncness.clone(),
+                    attrs: method.attrs.clone(),
                 })
             } else {
                 None

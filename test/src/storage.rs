@@ -2,7 +2,6 @@ use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
-use futures;
 
 
 #[allow(dead_code)]
@@ -14,7 +13,6 @@ pub enum SerialiserType {
 #[five::context]
 pub mod storage {
     pub trait SerialiserContract : {
-        #[inline]
         fn get_type(&self) -> SerialiserType;
     }
 
@@ -24,7 +22,6 @@ pub mod storage {
         fn retrieve(&self, key: String) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send + '_>>;
     }
     pub trait EncrypterContract {
-        #[inline]
         fn get_key(&self) -> &[u8];
     }
 

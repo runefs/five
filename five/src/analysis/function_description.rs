@@ -8,6 +8,7 @@ pub enum FunctionDescription {
         generics: GenericsInfo,
         output: ReturnType,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     },
     Implementation {
         name: Ident,
@@ -16,6 +17,7 @@ pub enum FunctionDescription {
         output: ReturnType,
         body: Block,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     },
 }
 #[allow(dead_code)]
@@ -79,6 +81,7 @@ impl FunctionDescription {
                 generics: _,
                 output: _,
                 asyncness,
+                attrs: _,
             } => asyncness,
             Self::Implementation {
                 name: _,
@@ -87,6 +90,7 @@ impl FunctionDescription {
                 output: _,
                 body: _,
                 asyncness,
+                attrs: _,
             } => asyncness,
         }
     }
@@ -97,6 +101,7 @@ impl FunctionDescription {
         generics: GenericsInfo,
         output: ReturnType,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     ) -> Self {
         FunctionDescription::Declaration {
             name,
@@ -104,6 +109,7 @@ impl FunctionDescription {
             generics,
             output,
             asyncness,
+            attrs,
         }
     }
 
@@ -114,6 +120,7 @@ impl FunctionDescription {
         output: ReturnType,
         body: syn::Block,
         asyncness: Option<syn::token::Async>,
+        attrs: Vec<syn::Attribute>,
     ) -> Self {
         FunctionDescription::Implementation {
             name,
@@ -122,6 +129,7 @@ impl FunctionDescription {
             output,
             body,
             asyncness,
+            attrs,
         }
     }
 }
@@ -146,6 +154,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                         output,
                         body: body.clone(),
                         asyncness: method.sig.asyncness.clone(),
+                        attrs: method.attrs.clone(),
                     })
                 } else {
                     Some(FunctionDescription::Declaration {
@@ -154,6 +163,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                         generics,
                         output,
                         asyncness: method.sig.asyncness.clone(),
+                        attrs: method.attrs.clone(),
                     })
                 }
             } else {
