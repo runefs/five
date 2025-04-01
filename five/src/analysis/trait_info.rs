@@ -30,11 +30,14 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
         .iter()
         .filter_map(|item| {
             if let syn::TraitItem::Fn(method) = item {
+                let params = analyze_parameters(&method.sig);
+                let output = method.sig.output.clone();
                 Some(FunctionDescription::Declaration {
                     name: method.sig.ident.clone(),
-                    params: analyze_parameters(&method.sig),
+                    params,
                     generics: analyze_generics_from_method(method),
-                    output: method.sig.output.clone(),
+                    output,
+                    asyncness: method.sig.asyncness.clone(),
                 })
             } else {
                 None

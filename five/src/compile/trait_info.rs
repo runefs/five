@@ -32,6 +32,7 @@ impl Compiler<TraitInfo> for TraitInfo {
                         params,
                         generics,
                         output,
+                        asyncness,
                     } => {
                         let param_tokens = params.iter().map(|p| p.to_token_stream());
                         let generic_params = generics.get_params();
@@ -44,8 +45,15 @@ impl Compiler<TraitInfo> for TraitInfo {
                             quote::quote!()
                         };
 
-                        syn::parse_quote! {
-                            fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                        // Add async keyword if needed
+                        if asyncness.is_some() {
+                            syn::parse_quote! {
+                                async fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                            }
+                        } else {
+                            syn::parse_quote! {
+                                fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                            }
                         }
                     }
                     FunctionDescription::Implementation { .. } => {

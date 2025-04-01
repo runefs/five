@@ -32,7 +32,7 @@ impl Compiler<ContextInfo> for ContextInfo {
                 .flat_map(|block| {
                     block.functions.iter().map(|f| {
                 match f {
-                    FunctionDescription::Implementation { name, params, generics, output, .. } => {
+                    FunctionDescription::Implementation { name, params, generics, output, asyncness, .. } => {
                         let param_tokens = params.iter().map(|p| p.to_token_stream());
 
                         let generic_params = generics.get_params();
@@ -45,8 +45,15 @@ impl Compiler<ContextInfo> for ContextInfo {
                             quote::quote!()
                         };
 
-                        let method: syn::TraitItem = syn::parse_quote! {
-                            fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                        // Handle async methods
+                        let method: syn::TraitItem = if asyncness.is_some() {
+                            syn::parse_quote! {
+                                async fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                            }
+                        } else {
+                            syn::parse_quote! {
+                                fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                            }
                         };
 
                         // Trait methods don't have visibility modifiers, so we can just return the method
@@ -235,6 +242,7 @@ impl ContextInfo {
                         generics,
                         output,
                         body,
+                        asyncness,
                     } => {
                         let mut body = body.clone();
                         self.rewrite_role_access(roles_map, &mut body);
@@ -245,6 +253,7 @@ impl ContextInfo {
                             generics.clone(),
                             output.clone(),
                             body,
+                            asyncness.clone(),
                         )
                     }
                     f => f.clone(),

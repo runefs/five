@@ -1,8 +1,12 @@
+use proc_macro2::TokenStream;
+use quote::ToTokens;
 use std::collections::HashMap;
+use syn::{visit_mut::VisitMut, Block, Expr, ImplItemFn, Member};
 
 use super::{Compiled, CompiledImplBlock, CompiledTraitInfo, Compiler};
-use crate::analysis::{FunctionDescription, ImplBlockInfo, Role, TraitInfo};
-use syn::{visit_mut::VisitMut, Expr};
+use crate::analysis::{
+    FunctionDescription, GenericsInfo, ImplBlockInfo, ParameterInfo, Role, TraitInfo,
+};
 
 #[derive(Clone)]
 pub struct CompiledRole {
@@ -141,6 +145,7 @@ impl Role {
                     generics,
                     output,
                     body,
+                    asyncness,
                 } => {
                     let mut new_body = body.clone();
                     let mut rewriter = SelfRewriter {
@@ -152,12 +157,22 @@ impl Role {
                     let role_name = to_role_name(&self.name.to_string());
                     let new_name = syn::Ident::new(&format!("{}_{}", role_name, name), name.span());
 
+                    // Code from non-self functions gets rewritten into a new function that includes
+                    // a self parameter
+                    let receiver_param = ParameterInfo::ImmutableReference(Box::new(ParameterInfo::SelfRef));
+                    let mut new_params = vec![receiver_param];
+                    new_params.extend(params.clone());
+
+                    // Create a new implementation with a modified signature and same body
+                    // We don't need to rewrite this function body since it's already using Role::[Function] syntax
+                    // The context structs handle the translation between struct fields and roles during code generation
                     FunctionDescription::new_implementation(
                         new_name,
                         params.clone(),
                         generics.clone(),
                         output.clone(),
                         new_body,
+                        asyncness.clone(),
                     )
                 }
                 decl => decl.clone(),

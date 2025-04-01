@@ -154,6 +154,7 @@ impl Compiled<ModuleInfo> for CompiledModule {
             GenericsInfo::from_syn_generics(&context.base.generics),
             return_type,
             bind_fn_body,
+            None,
         );
 
         let bind_fn = bind_fn.compile();

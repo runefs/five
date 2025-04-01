@@ -2,6 +2,7 @@ use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
+use futures;
 
 
 #[allow(dead_code)]
@@ -101,10 +102,10 @@ pub mod storage {
             } else {
                 serialised
             };
-            self.storage.store(key,encrypted).await
+            self.store.store(key, encrypted).await
         } 
         async fn retrieve<T: for<'de> Deserialize<'de>>(&self, key: String) -> Result<T, String>{
-            let encrypted_data = self.storage.retrieve(key).await?;
+            let encrypted_data = self.store.retrieve(key).await?;
             let decrypted = if self.should_encrypt() {
                 self.encrypter.decrypt(encrypted_data.as_slice())?
             } else {

@@ -46,7 +46,6 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
         .map_or(Vec::new(), |(_, path, _)| vec![path.clone()]);
 
     // Analyze methods in the impl block
-    // Analyze methods in the impl block
     let functions = item_impl
         .items
         .iter()
@@ -62,6 +61,7 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
                     generics,
                     output: method.sig.output.clone(),
                     body,
+                    asyncness: method.sig.asyncness.clone(),
                 })
             } else {
                 None
