@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-
+use quote::ToTokens;
 use impl_block::CompiledImplBlock;
 use proc_macro2::TokenStream;
-use quote::ToTokens;
 use role::{to_role_name, CompiledRole};
 use syn::{visit_mut::VisitMut, Block, Expr, ItemStruct, Member};
 
@@ -12,10 +11,59 @@ use super::*;
 
 impl Compiler<ContextInfo> for ContextInfo {
     fn compile(&self) -> CompiledContext {
-        let base = self.compile_struct();
 
+        // Create the context trait from impl block methods
+        let blocks = self.impl_blocks
+            .iter()
+            .map(|block: &ImplBlockInfo| {
+                let mut block = block.clone();
+                block.attrs = self.attrs.clone();
+                block
+            }).collect::<Vec<ImplBlockInfo>>();
+        let trait_methods =
+            blocks
+                .iter()
+                .flat_map(|block| {
+                    block.functions.iter().map(|f| {
+                        match f {
+                            FunctionDescription::Implementation { name, params, generics, output, asyncness, .. } => {
+                                let param_tokens = params.iter().map(|p| p.to_token_stream());
+
+                                let generic_params = generics.get_params();
+                                let where_clause = generics.get_where_clause();
+
+                                // Only add angle brackets if we have generic parameters
+                                let generic_tokens = if !generic_params.is_empty() {
+                                    quote::quote!(<#(#generic_params),*>)
+                                } else {
+                                    quote::quote!()
+                                };
+
+                                // Handle async methods
+                                let method: syn::TraitItem = if asyncness.is_some() {
+                                    syn::parse_quote! {
+                                        async fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                                    }
+                                } else {
+                                    syn::parse_quote! {
+                                        fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
+                                    }
+                                };
+
+                                // Trait methods don't have visibility modifiers, so we can just return the method
+                                method
+                            },
+                            _ => panic!("Expected implementation")
+                        }
+                    })
+                })
+                .collect::<Vec<syn::TraitItem>>();
+
+        let base = self.compile_struct();
+        
         // Get the type name and generics from the base struct
         let type_name = &base.ident;
+        
         let generics = GenericsInfo::from_syn_generics(&base.generics);
 
         // Create roles_map for method compilation
@@ -25,54 +73,17 @@ impl Compiler<ContextInfo> for ContextInfo {
             .map(|r| (to_role_name(&r.name.to_string()), r.contract.clone()))
             .collect();
 
-        // Create the context trait from impl block methods
-        let trait_methods =
-            self.impl_blocks
-                .iter()
-                .flat_map(|block| {
-                    block.functions.iter().map(|f| {
-                match f {
-                    FunctionDescription::Implementation { name, params, generics, output, asyncness, .. } => {
-                        let param_tokens = params.iter().map(|p| p.to_token_stream());
-
-                        let generic_params = generics.get_params();
-                        let where_clause = generics.get_where_clause();
-
-                        // Only add angle brackets if we have generic parameters
-                        let generic_tokens = if !generic_params.is_empty() {
-                            quote::quote!(<#(#generic_params),*>)
-                        } else {
-                            quote::quote!()
-                        };
-
-                        // Handle async methods
-                        let method: syn::TraitItem = if asyncness.is_some() {
-                            syn::parse_quote! {
-                                async fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
-                            }
-                        } else {
-                            syn::parse_quote! {
-                                fn #name #generic_tokens (#(#param_tokens),*) #output #where_clause;
-                            }
-                        };
-
-                        // Trait methods don't have visibility modifiers, so we can just return the method
-                        method
-                    },
-                    _ => panic!("Expected implementation")
-                }
-            })
-                })
-                .collect::<Vec<syn::TraitItem>>();
-
+            
         let trait_name = syn::Ident::new("Context", proc_macro2::Span::call_site());
 
-        let trait_def = quote::quote! {
-            pub trait #trait_name {
-                #(#trait_methods)*
-            }
-        };
-
+        // Create the trait definition with async_trait if needed
+        let trait_def = 
+            quote::quote! {
+                pub trait #trait_name {
+                    #(#trait_methods)*
+                }
+            };
+            
         let context_trait = syn::parse2(trait_def).unwrap();
 
         // Compile roles
@@ -88,22 +99,23 @@ impl Compiler<ContextInfo> for ContextInfo {
             .collect();
 
         // Create impl blocks that implement Context
-        let context_methods = self
-            .impl_blocks
-            .iter()
-            .map(|b| {
-                let mut impl_block = self.compile_context_methods(&roles_map, b.clone());
-                impl_block.generics = generics.clone();
-                impl_block.implemented_traits = vec![syn::parse_quote!(Context)];
-                impl_block
-            })
-            .collect();
+        let context_methods = 
+            blocks
+                .iter()
+                .map(|b| {
+                    let mut impl_block = self.compile_context_methods(&roles_map, b.clone());
+                    impl_block.generics = generics.clone();
+                    impl_block.implemented_traits = vec![syn::parse_quote!(Context)];
+                    impl_block
+                })
+                .collect();
 
         CompiledContext {
             roles,
             context_methods,
             base,
             context_trait,
+            attrs: self.attrs.clone(),
         }
     }
 
@@ -116,12 +128,13 @@ pub struct CompiledContext {
     pub context_methods: Vec<CompiledImplBlock>,
     pub base: ItemStruct,
     pub context_trait: syn::ItemTrait,
+    pub attrs: Vec<syn::Attribute>,
 }
 
 impl Compiled<ContextInfo> for CompiledContext {
     fn emit(&self) -> TokenStream {
         let mut ts = TokenStream::new();
-
+        
         // First emit the struct definition
         ts.extend(self.base.to_token_stream());
 
@@ -135,7 +148,7 @@ impl Compiled<ContextInfo> for CompiledContext {
         ts.extend(TokenStream::from_iter(
             self.context_methods.iter().flat_map(|r| r.emit()),
         ));
-
+        
         ts
     }
 }

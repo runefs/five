@@ -75,22 +75,17 @@ pub mod storage {
                 .map_err(|_| "Decryption failed".to_string())
         }
     }
+    
     struct Context {
         serialiser : SerialiserRole,
         encrypter: EncrypterRole,
         store: StoreRole
     }
+    #[async_trait::async_trait]
     impl Context {
         #[inline]
         fn should_encrypt(&self) -> bool {
-            #[cfg(release)]
-            {
-                true
-            }
-            #[cfg(debug_assertions)]
-            {
-                false
-            }
+            true
         }
         pub async fn store<T: Serialize>(&self, key: String, data: &T)-> Result<String, String> {
             let serialised = self.serialiser.serialize(data)?;

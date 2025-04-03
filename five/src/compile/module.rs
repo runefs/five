@@ -36,7 +36,9 @@ impl Compiled<ModuleInfo> for CompiledModule {
             impl_block.implemented_traits = vec![syn::parse_quote!(#trait_name)];
             impl_block.self_ty = syn::parse_quote!(Context #ty_generics);
             impl_block.generics = GenericsInfo::from_syn_generics(&context.base.generics);
+            impl_block.attrs = context.attrs.clone();
         }
+        
 
         // Get the struct fields from the context base
         let field_names = match &context.base.fields {
@@ -161,17 +163,15 @@ impl Compiled<ModuleInfo> for CompiledModule {
         let bind_fn = bind_fn.compile();
 
         let bind_fn = bind_fn.emit();
-
         let context = context.emit();
         let others = &self.others;
 
-        let tokens = quote! {
-                #context
-                #bind_fn
-                #(#others)*
-        };
-
-        tokens
+        
+        quote! {
+            #context
+            #bind_fn
+            #(#others)*
+        }
     }
 }
 

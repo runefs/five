@@ -1,4 +1,5 @@
 use super::*;
+use quote::ToTokens;
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ContextInfo {
@@ -7,6 +8,7 @@ pub struct ContextInfo {
     pub properties: Vec<PropertyInfo>,
     pub impl_blocks: Vec<ImplBlockInfo>,
     pub roles: Vec<Role>,
+    pub attrs: Vec<syn::Attribute>,
 }
 #[allow(dead_code)]
 impl ContextInfo {
@@ -16,6 +18,7 @@ impl ContextInfo {
         properties: Vec<PropertyInfo>,
         impl_blocks: Vec<ImplBlockInfo>,
         roles: Vec<Role>,
+        attrs: Vec<syn::Attribute>,
     ) -> Self {
         ContextInfo {
             name,
@@ -23,6 +26,7 @@ impl ContextInfo {
             properties,
             impl_blocks,
             roles,
+            attrs,
         }
     }
 }
@@ -40,12 +44,13 @@ pub fn analyze_context(
 
     // Analyze the provided impl blocks directly
     let analyzed_impl_blocks = impl_blocks.iter().map(analyze_impl_block).collect();
-
+    
     ContextInfo {
         name: item_struct.ident.clone(),
         generics,
         properties,
         impl_blocks: analyzed_impl_blocks,
         roles: vec![],
+        attrs: item_struct.attrs.clone(),
     }
 }

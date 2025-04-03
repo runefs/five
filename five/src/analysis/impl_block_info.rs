@@ -8,6 +8,7 @@ pub struct ImplBlockInfo {
     pub implemented_traits: Vec<syn::Path>,
     pub functions: Vec<FunctionDescription>,
     pub self_ty: Type,
+    pub attrs: Vec<syn::Attribute>,
 }
 impl ImplBlockInfo {
     pub fn new(
@@ -16,6 +17,7 @@ impl ImplBlockInfo {
         implemented_traits: Vec<syn::Path>,
         functions: Vec<FunctionDescription>,
         self_ty: Type,
+        attrs: Vec<syn::Attribute>,
     ) -> Self {
         ImplBlockInfo {
             generics,
@@ -23,6 +25,7 @@ impl ImplBlockInfo {
             implemented_traits,
             functions,
             self_ty,
+            attrs,
         }
     }
 }
@@ -76,5 +79,6 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
         implemented_traits,
         functions,
         self_ty,
+        item_impl.attrs.clone(),
     )
 }

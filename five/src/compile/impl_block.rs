@@ -10,6 +10,7 @@ pub struct CompiledImplBlock {
     pub implemented_traits: Vec<syn::Path>,
     pub functions: Vec<CompiledFunctionDescription>,
     pub self_ty: syn::Type,
+    pub attrs: Vec<syn::Attribute>,
 }
 
 impl Compiled<ImplBlockInfo> for CompiledImplBlock {
@@ -56,8 +57,9 @@ impl Compiled<ImplBlockInfo> for CompiledImplBlock {
         } else {
             quote!()
         };
-
+        let attrs = &self.attrs;
         quote! {
+            #(#attrs)*
             impl #impl_generic_tokens #impl_trait Context #type_generic_tokens #impl_where {
                 #(#functions)*
             }
@@ -73,6 +75,7 @@ impl Compiler<ImplBlockInfo> for ImplBlockInfo {
             implemented_traits: self.implemented_traits.clone(),
             functions: self.functions.iter().map(|f| f.compile()).collect(),
             self_ty: self.self_ty.clone(),
+            attrs: self.attrs.clone(),
         }
     }
 

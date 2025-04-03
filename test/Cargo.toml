@@ -10,10 +10,11 @@ repository.workspace = true
 [dependencies]
 five = { path = "../five" }
 serde_json = "1.0"
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "0.11"
 aes-gcm = "0.10"
 rand = "0.8"
 futures = "0.3"
 async-trait = "0.1"
 lazy_static = "1.4"
+tokio = { version = "1", features = ["full"] }

@@ -180,6 +180,7 @@ impl Role {
             .collect();
 
         let impl_block = ImplBlockInfo {
+            attrs: vec![],
             self_ty: context_ty,
             generics: self.generics.clone(),
             for_lifetimes: None,
