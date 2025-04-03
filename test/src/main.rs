@@ -1,25 +1,58 @@
 mod account;
 mod storage;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use account::LedgerContract;
+use lazy_static::lazy_static;
+use storage::{SerialiserType, StoreContract, EncrypterContract,SerialiserContract};
+
+lazy_static! {
+    static ref GLOBAL_STORAGE: Mutex<HashMap<String, Vec<u8>>> = Mutex::new(HashMap::new());
+}
 
 fn main() {
     test_account();
     test_storage();
 }
 
-fn test_storage() {
-    struct InMemoryStore {
-        data: HashMap<String, Vec<u8>>,
+async fn test_storage() {
+    struct Serialiser;
+    impl SerialiserContract for Serialiser {
+        fn get_type(&self) -> SerialiserType {
+            SerialiserType::Json
+        }
     }
-    impl storage::StoreContract for InMemoryStore {
-        fn store(&self, key: String, data: Vec<u8>) -> Result<String, String> {
-            self.data.insert(key, data);
+
+    struct Encrypter;
+    impl EncrypterContract for Encrypter {
+        fn get_key(&self) -> &[u8] {
+            b"01234567890123456789012345678901"
+        }
+    }
+    
+    struct InMemoryStore;
+    
+    #[async_trait::async_trait]
+    impl StoreContract for InMemoryStore {
+        async fn store(&self, key: String, data: Vec<u8>) -> Result<String, String> {
+            let mut storage = GLOBAL_STORAGE.lock().map_err(|e| e.to_string())?;
+            storage.insert(key.clone(), data);
             Ok(key)
         }
-        fn retrieve(&self, key: String) -> Result<Vec<u8>, String> {
-            self.data.get(&key).ok_or("Key not found".to_string())
+        async fn retrieve(&self, key: String) -> Result<Vec<u8>, String> {
+            let storage = GLOBAL_STORAGE.lock().map_err(|e| e.to_string())?;
+            let v = storage.get(&key).ok_or("Key not found".to_string())?;
+            Ok(v.clone())
         }
     }
+
+
+    let store = storage::bind(Serialiser, Encrypter,InMemoryStore);
+    let key = "FirstKey";
+    let data = "a lot of very important data";
+    store.store(key.to_string(), data.as_bytes().to_vec()).await.unwrap();
+    let data = store.retrieve(key.to_string()).await.unwrap();
+    println!("Data: {:?}", data);
 }
 
 fn test_account() {

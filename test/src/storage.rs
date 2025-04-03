@@ -92,7 +92,7 @@ pub mod storage {
                 false
             }
         }
-        async fn store<T: Serialize>(&self, key: String, data: &T)-> Result<String, String> {
+        pub async fn store<T: Serialize>(&self, key: String, data: &T)-> Result<String, String> {
             let serialised = self.serialiser.serialize(data)?;
             let encrypted = if self.should_encrypt() {
                 self.encrypter.encrypt(serialised.as_slice())?
@@ -101,7 +101,7 @@ pub mod storage {
             };
             self.store.store(key, encrypted).await
         } 
-        async fn retrieve<T: for<'de> Deserialize<'de>>(&self, key: String) -> Result<T, String>{
+        pub async fn retrieve<T: for<'de> Deserialize<'de>>(&self, key: String) -> Result<T, String>{
             let encrypted_data = self.store.retrieve(key).await?;
             let decrypted = if self.should_encrypt() {
                 self.encrypter.decrypt(encrypted_data.as_slice())?
