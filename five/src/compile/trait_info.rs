@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use quote::ToTokens;
 
 use super::{Compiled, Compiler};
@@ -10,6 +12,7 @@ pub struct CompiledTraitInfo {
 
 impl ToTokens for CompiledTraitInfo {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend(proc_macro2::TokenStream::from_str("\n").unwrap());
         self.trait_item.to_tokens(tokens);
     }
 }
@@ -75,7 +78,7 @@ impl Compiler<TraitInfo> for TraitInfo {
             ident: self.name.clone(),
             generics: self.generics.to_syn_generics(),
             colon_token: None,
-            supertraits: syn::punctuated::Punctuated::new(),
+            supertraits: self.supertraits.clone(),
             brace_token: syn::token::Brace::default(),
             items: functions,
             restriction: None,

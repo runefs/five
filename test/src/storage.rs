@@ -16,10 +16,10 @@ pub mod storage {
         fn get_type(&self) -> SerialiserType;
     }
 
-
+    #[async_trait::async_trait]
     pub trait StoreContract: Send + Sync {
-        fn store(&self, key: String, data: Vec<u8>) -> Pin<Box<dyn Future<Output = Result<String, String>> + Send + '_>>;
-        fn retrieve(&self, key: String) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send + '_>>;
+        async fn store(&self, key: String, data: Vec<u8>) -> Result<String, String>;
+        async fn retrieve(&self, key: String) -> Result<Vec<u8>, String>;
     }
     pub trait EncrypterContract {
         fn get_key(&self) -> &[u8];

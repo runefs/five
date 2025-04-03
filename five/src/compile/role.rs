@@ -20,7 +20,7 @@ impl Compiled<Role> for CompiledRole {
         let contract = &self.contract;
 
         quote! {
-            pub #contract
+            #contract
 
             #impl_block
         }
@@ -130,8 +130,8 @@ impl Role {
         }
 
         // Compile the contract trait
-        let contract = self.contract.compile();
-
+        let mut contract = self.contract.compile();
+        contract.trait_item.vis = syn::Visibility::Public(syn::token::Pub::default());
         // Rewrite methods to access self.{role_name}
         let functions = self
             .methods

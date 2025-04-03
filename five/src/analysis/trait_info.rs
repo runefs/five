@@ -8,6 +8,7 @@ pub struct TraitInfo {
     pub generics: GenericsInfo,
     pub functions: Vec<FunctionDescription>,
     pub attrs: Vec<syn::Attribute>,
+    pub supertraits: syn::punctuated::Punctuated<syn::TypeParamBound, syn::Token![+]>,
 }
 
 pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
@@ -38,5 +39,6 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
         generics,
         functions,
         attrs: item_trait.attrs.clone(),
+        supertraits: item_trait.supertraits.clone(),
     }
 }
