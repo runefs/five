@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use quote::ToTokens;
 use impl_block::CompiledImplBlock;
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use role::{to_role_name, CompiledRole};
+use std::collections::HashMap;
 use syn::{visit_mut::VisitMut, Block, Expr, ItemStruct, Member};
 
 use crate::analysis::{ContextInfo, FunctionDescription, GenericsInfo, ImplBlockInfo, TraitInfo};
@@ -11,15 +11,16 @@ use super::*;
 
 impl Compiler<ContextInfo> for ContextInfo {
     fn compile(&self) -> CompiledContext {
-
         // Create the context trait from impl block methods
-        let blocks = self.impl_blocks
+        let blocks = self
+            .impl_blocks
             .iter()
             .map(|block: &ImplBlockInfo| {
                 let mut block = block.clone();
                 block.attrs = self.attrs.clone();
                 block
-            }).collect::<Vec<ImplBlockInfo>>();
+            })
+            .collect::<Vec<ImplBlockInfo>>();
         let trait_methods =
             blocks
                 .iter()
@@ -60,10 +61,10 @@ impl Compiler<ContextInfo> for ContextInfo {
                 .collect::<Vec<syn::TraitItem>>();
 
         let base = self.compile_struct();
-        
+
         // Get the type name and generics from the base struct
         let type_name = &base.ident;
-        
+
         let generics = GenericsInfo::from_syn_generics(&base.generics);
 
         // Create roles_map for method compilation
@@ -73,17 +74,15 @@ impl Compiler<ContextInfo> for ContextInfo {
             .map(|r| (to_role_name(&r.name.to_string()), r.contract.clone()))
             .collect();
 
-            
         let trait_name = syn::Ident::new("Context", proc_macro2::Span::call_site());
 
         // Create the trait definition with async_trait if needed
-        let trait_def = 
-            quote::quote! {
-                pub trait #trait_name {
-                    #(#trait_methods)*
-                }
-            };
-            
+        let trait_def = quote::quote! {
+            pub trait #trait_name {
+                #(#trait_methods)*
+            }
+        };
+
         let context_trait = syn::parse2(trait_def).unwrap();
 
         // Compile roles
@@ -99,16 +98,15 @@ impl Compiler<ContextInfo> for ContextInfo {
             .collect();
 
         // Create impl blocks that implement Context
-        let context_methods = 
-            blocks
-                .iter()
-                .map(|b| {
-                    let mut impl_block = self.compile_context_methods(&roles_map, b.clone());
-                    impl_block.generics = generics.clone();
-                    impl_block.implemented_traits = vec![syn::parse_quote!(Context)];
-                    impl_block
-                })
-                .collect();
+        let context_methods = blocks
+            .iter()
+            .map(|b| {
+                let mut impl_block = self.compile_context_methods(&roles_map, b.clone());
+                impl_block.generics = generics.clone();
+                impl_block.implemented_traits = vec![syn::parse_quote!(Context)];
+                impl_block
+            })
+            .collect();
 
         CompiledContext {
             roles,
@@ -134,7 +132,7 @@ pub struct CompiledContext {
 impl Compiled<ContextInfo> for CompiledContext {
     fn emit(&self) -> TokenStream {
         let mut ts = TokenStream::new();
-        
+
         // First emit the struct definition
         ts.extend(self.base.to_token_stream());
 
@@ -148,7 +146,7 @@ impl Compiled<ContextInfo> for CompiledContext {
         ts.extend(TokenStream::from_iter(
             self.context_methods.iter().flat_map(|r| r.emit()),
         ));
-        
+
         ts
     }
 }
@@ -267,8 +265,8 @@ impl ContextInfo {
                             generics.clone(),
                             output.clone(),
                             body,
-                            asyncness.clone(),
-                            attrs.clone()
+                            *asyncness,
+                            attrs.clone(),
                         )
                     }
                     f => f.clone(),

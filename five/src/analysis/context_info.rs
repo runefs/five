@@ -1,5 +1,4 @@
 use super::*;
-use quote::ToTokens;
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ContextInfo {
@@ -44,7 +43,7 @@ pub fn analyze_context(
 
     // Analyze the provided impl blocks directly
     let analyzed_impl_blocks = impl_blocks.iter().map(analyze_impl_block).collect();
-    
+
     ContextInfo {
         name: item_struct.ident.clone(),
         generics,

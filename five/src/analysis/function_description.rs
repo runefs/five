@@ -153,7 +153,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                         generics,
                         output,
                         body: body.clone(),
-                        asyncness: method.sig.asyncness.clone(),
+                        asyncness: method.sig.asyncness,
                         attrs: method.attrs.clone(),
                     })
                 } else {
@@ -162,7 +162,7 @@ pub fn analyze_trait_methods(item_trait: &syn::ItemTrait) -> Vec<FunctionDescrip
                         params,
                         generics,
                         output,
-                        asyncness: method.sig.asyncness.clone(),
+                        asyncness: method.sig.asyncness,
                         attrs: method.attrs.clone(),
                     })
                 }

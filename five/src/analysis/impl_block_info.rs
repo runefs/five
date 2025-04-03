@@ -64,7 +64,7 @@ pub fn analyze_impl_block(item_impl: &syn::ItemImpl) -> ImplBlockInfo {
                     generics,
                     output: method.sig.output.clone(),
                     body,
-                    asyncness: method.sig.asyncness.clone(),
+                    asyncness: method.sig.asyncness,
                     attrs: method.attrs.clone(),
                 })
             } else {

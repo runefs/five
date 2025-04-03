@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use syn::{visit_mut::VisitMut, Expr};
 
 use super::{Compiled, CompiledImplBlock, CompiledTraitInfo, Compiler};
-use crate::analysis::{
-    FunctionDescription, ImplBlockInfo, ParameterInfo, Role, TraitInfo,
-};
+use crate::analysis::{FunctionDescription, ImplBlockInfo, ParameterInfo, Role, TraitInfo};
 
 #[derive(Clone)]
 pub struct CompiledRole {
@@ -158,7 +156,8 @@ impl Role {
 
                     // Code from non-self functions gets rewritten into a new function that includes
                     // a self parameter
-                    let receiver_param = ParameterInfo::ImmutableReference(Box::new(ParameterInfo::SelfRef));
+                    let receiver_param =
+                        ParameterInfo::ImmutableReference(Box::new(ParameterInfo::SelfRef));
                     let mut new_params = vec![receiver_param];
                     new_params.extend(params.clone());
 
@@ -171,7 +170,7 @@ impl Role {
                         generics.clone(),
                         output.clone(),
                         new_body,
-                        asyncness.clone(),
+                        *asyncness,
                         attrs.clone(),
                     )
                 }

@@ -25,7 +25,7 @@ pub fn analyze_trait(item_trait: &syn::ItemTrait) -> TraitInfo {
                     params,
                     generics: analyze_generics_from_method(method),
                     output,
-                    asyncness: method.sig.asyncness.clone(),
+                    asyncness: method.sig.asyncness,
                     attrs: method.attrs.clone(),
                 })
             } else {

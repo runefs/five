@@ -1,12 +1,12 @@
 mod account;
 mod storage;
-use std::collections::HashMap;
-use std::sync::Mutex;
+use crate::storage::Storage;
 use account::LedgerContract;
 use lazy_static::lazy_static;
-use storage::{SerialiserType, StoreContract, EncrypterContract,SerialiserContract};
-use crate::storage::Storage;
-use serde::{Serialize,Deserialize};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
+use storage::{EncrypterContract, SerialiserContract, SerialiserType, StoreContract};
 lazy_static! {
     static ref GLOBAL_STORAGE: Mutex<HashMap<String, Vec<u8>>> = Mutex::new(HashMap::new());
 }
@@ -19,7 +19,7 @@ async fn main() {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Data {
-    pub value: String
+    pub value: String,
 }
 
 async fn test_storage() {
@@ -36,9 +36,9 @@ async fn test_storage() {
             b"01234567890123456789012345678901"
         }
     }
-    
+
     struct InMemoryStore;
-    
+
     #[async_trait::async_trait]
     impl StoreContract for InMemoryStore {
         async fn store(&self, key: String, data: Vec<u8>) -> Result<String, String> {
@@ -55,10 +55,11 @@ async fn test_storage() {
         }
     }
 
-
-    let store = storage::bind(Serialiser, Encrypter,InMemoryStore);
+    let store = storage::bind(Serialiser, Encrypter, InMemoryStore);
     let key = "FirstKey";
-    let data = Data { value: "a lot of very important data".to_string() };
+    let data = Data {
+        value: "a lot of very important data".to_string(),
+    };
     store.store(key.to_string(), &data).await.unwrap();
     let data = store.retrieve::<Data>(key.to_string()).await.unwrap();
     println!("Data: {:?}", data);

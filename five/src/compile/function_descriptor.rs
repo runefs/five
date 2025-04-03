@@ -67,7 +67,7 @@ impl Compiled<CompiledFunctionDescription> for CompiledFunctionDescription {
                 // Create the function signature
                 let sig = syn::Signature {
                     constness: None,
-                    asyncness: asyncness.clone(),
+                    asyncness: *asyncness,
                     unsafety: None,
                     abi: None,
                     fn_token: syn::token::Fn::default(),
@@ -112,7 +112,7 @@ impl Compiler<CompiledFunctionDescription> for FunctionDescription {
                 params: params.clone(),
                 generics: generics.clone(),
                 output: output.clone(),
-                asyncness: asyncness.clone(),
+                asyncness: *asyncness,
                 attrs: attrs.clone(),
             },
             FunctionDescription::Implementation {
@@ -129,7 +129,7 @@ impl Compiler<CompiledFunctionDescription> for FunctionDescription {
                 generics: generics.clone(),
                 output: output.clone(),
                 body: Some(body.clone()),
-                asyncness: asyncness.clone(),
+                asyncness: *asyncness,
                 attrs: attrs.clone(),
             },
         }

@@ -38,7 +38,6 @@ impl Compiled<ModuleInfo> for CompiledModule {
             impl_block.generics = GenericsInfo::from_syn_generics(&context.base.generics);
             impl_block.attrs = context.attrs.clone();
         }
-        
 
         // Get the struct fields from the context base
         let field_names = match &context.base.fields {
@@ -166,7 +165,6 @@ impl Compiled<ModuleInfo> for CompiledModule {
         let context = context.emit();
         let others = &self.others;
 
-        
         quote! {
             #context
             #bind_fn
