@@ -25,9 +25,9 @@ pub mod storage {
     trait StoreRole: StoreContract {}
 
     trait SerialiserRole: SerialiserContract {
-        fn serialize<T>(&self, data: &T) -> Result<Vec<u8>, String> 
-        where 
-            T: Serialize
+        fn serialize<T>(&self, data: &T) -> Result<Vec<u8>, String>
+        where
+            T: Serialize,
         {
             match self.get_type() {
                 SerialiserType::Json => {
@@ -39,9 +39,9 @@ pub mod storage {
             }
         }
 
-        fn deserialize<T>(&self, data: Vec<u8>) -> Result<T, String> 
-        where 
-            T: for<'de> Deserialize<'de>
+        fn deserialize<T>(&self, data: Vec<u8>) -> Result<T, String>
+        where
+            T: for<'de> Deserialize<'de>,
         {
             match self.get_type() {
                 SerialiserType::Json => serde_json::from_slice(&data)
@@ -96,9 +96,9 @@ pub mod storage {
         fn should_encrypt(&self) -> bool {
             true
         }
-        pub async fn store<T>(&self, key: String, data: &T) -> Result<String, String> 
-        where 
-            T: Serialize
+        pub async fn store<T>(&self, key: String, data: &T) -> Result<String, String>
+        where
+            T: Serialize,
         {
             let serialised = self.serialiser.serialize(data)?;
             let encrypted = if self.should_encrypt() {
@@ -108,12 +108,9 @@ pub mod storage {
             };
             self.store.store(key, encrypted).await
         }
-        pub async fn retrieve<T>(
-            &self,
-            key: String,
-        ) -> Result<T, String> 
-        where 
-            T: for<'de> Deserialize<'de>
+        pub async fn retrieve<T>(&self, key: String) -> Result<T, String>
+        where
+            T: for<'de> Deserialize<'de>,
         {
             let encrypted_data = self.store.retrieve(key).await?;
             let decrypted = if self.should_encrypt() {
