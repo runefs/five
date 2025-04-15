@@ -2,7 +2,7 @@ mod compiler;
 mod context;
 mod function_descriptor;
 mod impl_block;
-mod module;
+pub mod module;
 mod role;
 mod trait_info;
 

@@ -1,0 +1,3 @@
+# Prevent Cursor from auto-modifying files in the test directory
+# unless specifically instructed to do so
+test/ 

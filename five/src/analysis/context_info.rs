@@ -1,5 +1,5 @@
 use super::*;
-use quote::ToTokens;
+
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ContextInfo {
