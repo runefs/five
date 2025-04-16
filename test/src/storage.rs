@@ -28,14 +28,14 @@ pub mod storage {
     }
 
     trait SerialiserRole :  SerialiserContract{ 
-        fn serialize<T: Serialize>(&self, data: &T) -> Result<Vec<u8>, String> {
+        fn serialize(&self, data: &TContext) -> Result<Vec<u8>, String> {
             match self.get_type() {
                 SerialiserType::Json => serde_json::to_vec(data).map_err(|e| format!("JSON serialization error: {}", e)),
                 SerialiserType::Cbor => serde_cbor::to_vec(data).map_err(|e| format!("CBOR serialization error: {}", e))
             }
         }
         
-        fn deserialize<T: for<'de> Deserialize<'de>>(&self,data: Vec<u8>) -> Result<T, String> {
+        fn deserialize(&self,data: Vec<u8>) -> Result<TContext, String> {
             match self.get_type() {
                 SerialiserType::Json => serde_json::from_slice(&data).map_err(|e| format!("JSON deserialization error: {}", e)),
                 SerialiserType::Cbor => serde_cbor::from_slice(&data).map_err(|e| format!("CBOR deserialization error: {}", e))
@@ -74,18 +74,17 @@ pub mod storage {
         }
     }
     
-    struct Context {
+    struct Context<TContext: Serialize + for<'de> Deserialize<'de>> {
         serialiser : SerialiserRole,
         encrypter: EncrypterRole,
         store: StoreRole
     }
-    #[async_trait::async_trait]
-    impl Context {
+    impl<T: Serialize + for<'de> Deserialize<'de>> Context<TContext> {
         #[inline]
         fn should_encrypt(&self) -> bool {
             true
         }
-        pub async fn store<T: Serialize>(&self, key: String, data: &T)-> Result<String, String> {
+        pub async fn store(&self, key: String, data: &TContext)-> Result<String, String> {
             let serialised = self.serialiser.serialize(data)?;
             let encrypted = if self.should_encrypt() {
                 self.encrypter.encrypt(serialised.as_slice())?
@@ -94,14 +93,14 @@ pub mod storage {
             };
             self.store.store(key, encrypted).await
         } 
-        pub async fn retrieve<T: for<'de> Deserialize<'de>>(&self, key: String) -> Result<T, String>{
+        pub async fn retrieve(&self, key: String) -> Result<TContext, String>{
             let encrypted_data = self.store.retrieve(key).await?;
             let decrypted = if self.should_encrypt() {
                 self.encrypter.decrypt(encrypted_data.as_slice())?
             } else {
                 encrypted_data
             };
-            self.serialiser.deserialize::<T>(decrypted)
+            self.serialiser.deserialize::<TContext>(decrypted)
         }
     }
 }

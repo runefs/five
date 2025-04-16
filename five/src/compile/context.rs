@@ -20,6 +20,8 @@ impl Compiler<ContextInfo> for ContextInfo {
                 block.attrs = self.attrs.clone();
                 block
             }).collect::<Vec<ImplBlockInfo>>();
+        
+        // Get all method signatures for the trait, preserving generics
         let trait_methods =
             blocks
                 .iter()
@@ -29,10 +31,13 @@ impl Compiler<ContextInfo> for ContextInfo {
                             FunctionDescription::Implementation { name, params, generics, output, asyncness, .. } => {
                                 let param_tokens = params.iter().map(|p| p.to_token_stream());
 
-                                let generic_params = generics.get_params();
-                                let where_clause = generics.get_where_clause();
-
+                                // Combine generics from the impl block with the struct generics
+                                let combined_generics = generics.clone();
+                                
                                 // Only add angle brackets if we have generic parameters
+                                let generic_params = combined_generics.get_params();
+                                let where_clause = combined_generics.get_where_clause();
+                                
                                 let generic_tokens = if !generic_params.is_empty() {
                                     quote::quote!(<#(#generic_params),*>)
                                 } else {
@@ -73,16 +78,23 @@ impl Compiler<ContextInfo> for ContextInfo {
             .map(|r| (to_role_name(&r.name.to_string()), r.contract.clone()))
             .collect();
 
-            
+        // Extract all generic parameters from the struct definition    
+        let struct_generics = base.generics.clone();
+        let (_, ty_generics, _) = struct_generics.split_for_impl();
+        
+        // No special handling for specific types/methods - use trait methods as-is
         let trait_name = syn::Ident::new("Context", proc_macro2::Span::call_site());
 
-        // Create the trait definition with async_trait if needed
-        let trait_def = 
-            quote::quote! {
-                pub trait #trait_name {
-                    #(#trait_methods)*
-                }
-            };
+        // Create the trait definition with the same generic parameters as the Context struct
+        let struct_generics_params = generics.get_params();
+        let struct_where_clause = generics.get_where_clause();
+        
+        // Use the same generic parameters for both the trait and struct
+        let trait_def = quote::quote! {
+            pub trait #trait_name<#(#struct_generics_params),*> #struct_where_clause {
+                #(#trait_methods)*
+            }
+        };
             
         let context_trait = syn::parse2(trait_def).unwrap();
 
@@ -92,20 +104,74 @@ impl Compiler<ContextInfo> for ContextInfo {
             .iter()
             .map(|r| {
                 let mut compiled_role = r.compile(&roles_map);
-                compiled_role.impl_block.self_ty = syn::parse_quote!(#type_name #generics);
+                compiled_role.impl_block.self_ty = syn::parse_quote!(#type_name #ty_generics);
                 compiled_role.impl_block.generics = generics.clone();
                 compiled_role
             })
             .collect();
 
-        // Create impl blocks that implement Context
+        // Create impl blocks that implement Context<T, ...>
         let context_methods = 
             blocks
                 .iter()
                 .map(|b| {
                     let mut impl_block = self.compile_context_methods(&roles_map, b.clone());
                     impl_block.generics = generics.clone();
-                    impl_block.implemented_traits = vec![syn::parse_quote!(Context)];
+                    
+                    // Implement Context<T, ...> with the same generic parameters
+                    let generic_args: Vec<syn::GenericArgument> = generics.get_params().iter().map(|param| {
+                        match param {
+                            syn::GenericParam::Type(tp) => syn::GenericArgument::Type(
+                                syn::Type::Path(syn::TypePath {
+                                    qself: None,
+                                    path: syn::Path::from(tp.ident.clone()),
+                                }),
+                            ),
+                            syn::GenericParam::Lifetime(l) => syn::GenericArgument::Lifetime(l.lifetime.clone()),
+                            syn::GenericParam::Const(c) => syn::GenericArgument::Const(
+                                syn::Expr::Path(syn::ExprPath {
+                                    attrs: vec![],
+                                    qself: None,
+                                    path: syn::Path::from(c.ident.clone()),
+                                }),
+                            ),
+                        }
+                    }).collect();
+                    
+                    let trait_with_generics = {
+                        let mut segments = syn::punctuated::Punctuated::new();
+                        let mut args = syn::punctuated::Punctuated::new();
+                        
+                        for arg in &generic_args {
+                            args.push(arg.clone());
+                        }
+                        
+                        let trait_segment = syn::PathSegment {
+                            ident: trait_name.clone(),
+                            arguments: if args.is_empty() {
+                                syn::PathArguments::None
+                            } else {
+                                syn::PathArguments::AngleBracketed(
+                                    syn::AngleBracketedGenericArguments {
+                                        colon2_token: None,
+                                        lt_token: syn::Token![<](proc_macro2::Span::call_site()),
+                                        args,
+                                        gt_token: syn::Token![>](proc_macro2::Span::call_site()),
+                                    }
+                                )
+                            }
+                        };
+                        
+                        segments.push(trait_segment);
+                        
+                        syn::Path {
+                            leading_colon: None,
+                            segments,
+                        }
+                    };
+                    
+                    impl_block.implemented_traits = vec![trait_with_generics];
+                    
                     impl_block
                 })
                 .collect();
@@ -260,10 +326,12 @@ impl ContextInfo {
                     } => {
                         let mut body = body.clone();
                         self.rewrite_role_access(roles_map, &mut body);
-                        // Preserve the original parameters including self receiver
+                        
+                        // Just preserve all existing generics as is - we'll handle 
+                        // the correct generics at the impl block level
                         FunctionDescription::new_implementation(
                             name.clone(),
-                            params.clone(), // Keep original params which include self receiver
+                            params.clone(),
                             generics.clone(),
                             output.clone(),
                             body,
@@ -276,15 +344,40 @@ impl ContextInfo {
             })
             .collect();
 
-        ImplBlockInfo {
+        // Compile the impl block
+        let mut compiled = ImplBlockInfo {
             functions,
+            generics: self.generics.clone(), // Use the struct generics directly
             ..impl_block
         }
-        .compile()
+        .compile();
+        
+        // Convert the struct generics to a format usable in the self_ty
+        let generics = self.generics.to_syn_generics();
+        let (_, type_generics, _) = generics.split_for_impl();
+        
+        // Create the self type with proper generics
+        compiled.self_ty = {
+            let mut tokens = proc_macro2::TokenStream::new();
+            tokens.extend(quote::quote!(Context));
+            tokens.extend(type_generics.to_token_stream());
+            syn::parse2(tokens).unwrap()
+        };
+        
+        compiled
     }
 
     fn compile_struct(&self) -> ItemStruct {
-        let mut generics_params = self.generics.get_params().clone();
+        // Start with the user-defined generics from the original Context struct
+        let mut generics_params = Vec::new();
+        
+        // First add all of the user's original generic params - preserving their original bounds
+        for param in self.generics.get_params() {
+            generics_params.push(param.clone());
+        }
+
+        // Track which property types we need to generate generic parameters for
+        let mut field_generics = Vec::new();
 
         // Map properties to their corresponding generic parameters or original types
         let property_generics: Vec<_> = self
@@ -295,19 +388,64 @@ impl ContextInfo {
                     // Primitive type: use original type
                     (prop.get_name().clone(), prop.get_ty().clone(), None)
                 } else {
-                    // Non-primitive type: use a generic parameter with a contract
-                    let contract_name = format!(
-                        "{}Contract",
-                        to_upper_camel_case(&prop.get_name().to_string())
-                    );
-                    let generic_name = syn::Ident::new(
-                        &format!("T{}", to_upper_camel_case(&prop.get_name().to_string())),
-                        proc_macro2::Span::call_site(),
-                    );
-                    let contract_ident =
-                        syn::Ident::new(&contract_name, proc_macro2::Span::call_site());
+                    // Check if this type matches a trait role with a suffix like "Role"
+                    let is_role = match &prop.get_ty() {
+                        syn::Type::Path(type_path) if type_path.path.segments.len() == 1 => {
+                            let segment = &type_path.path.segments[0];
+                            segment.ident.to_string().ends_with("Role")
+                        },
+                        _ => false,
+                    };
 
-                    // Add the generic parameter to generics
+                    if is_role {
+                        // Non-primitive role type: use a generic parameter with a contract
+                        let contract_name = format!(
+                            "{}Contract",
+                            to_upper_camel_case(&prop.get_name().to_string())
+                        );
+                        let generic_name = syn::Ident::new(
+                            &format!("T{}", to_upper_camel_case(&prop.get_name().to_string())),
+                            proc_macro2::Span::call_site(),
+                        );
+                        let contract_ident =
+                            syn::Ident::new(&contract_name, proc_macro2::Span::call_site());
+
+                        // Add the field generic parameter to our tracking list
+                        field_generics.push(generic_name.clone());
+
+                        // Return the generic type instead of the original type
+                        (
+                            prop.get_name().clone(),
+                            syn::Type::Path(syn::TypePath {
+                                qself: None,
+                                path: syn::Path::from(generic_name),
+                            }),
+                            Some(contract_ident),
+                        )
+                    } else {
+                        // Non-role type: keep as is
+                        (prop.get_name().clone(), prop.get_ty().clone(), None)
+                    }
+                }
+            })
+            .collect();
+
+        // Now add the role trait generic params to our list,
+        // making sure we're not duplicating any that already exist
+        for (idx, (_, _, contract_ident)) in property_generics.iter().enumerate() {
+            if let Some(contract_ident) = contract_ident {
+                let generic_name = &field_generics[idx];
+                
+                // Check if the parameter already exists
+                let param_exists = generics_params.iter().any(|param| {
+                    if let syn::GenericParam::Type(type_param) = param {
+                        type_param.ident == *generic_name
+                    } else {
+                        false
+                    }
+                });
+
+                if !param_exists {
                     generics_params.push(syn::GenericParam::Type(syn::TypeParam {
                         attrs: vec![],
                         ident: generic_name.clone(),
@@ -323,22 +461,12 @@ impl ContextInfo {
                         default: None,
                         colon_token: Some(Default::default()),
                     }));
-
-                    // Return the generic type instead of the original type
-                    (
-                        prop.get_name().clone(),
-                        syn::Type::Path(syn::TypePath {
-                            qself: None,
-                            path: syn::Path::from(generic_name),
-                        }),
-                        Some(contract_ident),
-                    )
                 }
-            })
-            .collect();
+            }
+        }
 
         // Generate fields for the struct
-        let fields: Vec<syn::Field> = property_generics
+        let mut fields: Vec<syn::Field> = property_generics
             .into_iter()
             .map(|(field_name, field_type, _)| syn::Field {
                 mutability: syn::FieldMutability::None,
@@ -349,10 +477,59 @@ impl ContextInfo {
                 ty: field_type,
             })
             .collect();
+            
+        // Add PhantomData for all generic type parameters that aren't used in fields
+        // This prevents "unused type parameter" warnings
+        for param in &generics_params {
+            if let syn::GenericParam::Type(tp) = param {
+                let param_name = &tp.ident;
+                
+                // Check if this parameter is used in any field
+                let used_in_field = fields.iter().any(|field| {
+                    if let Some(_) = &field.ident {
+                        if let syn::Type::Path(type_path) = &field.ty {
+                            if let Some(segment) = type_path.path.segments.last() {
+                                return segment.ident == *param_name;
+                            }
+                        }
+                    }
+                    false
+                });
+                
+                if !used_in_field {
+                    // Add a PhantomData field for this type parameter
+                    let phantom_field = syn::Field {
+                        attrs: vec![],
+                        mutability: syn::FieldMutability::None, 
+                        vis: syn::Visibility::Inherited,
+                        ident: Some(syn::Ident::new(
+                            &format!("_phantom_{}", param_name),
+                            proc_macro2::Span::call_site(),
+                        )),
+                        colon_token: Some(Default::default()),
+                        ty: syn::parse_quote!(::std::marker::PhantomData<#param_name>),
+                    };
+                    
+                    fields.push(phantom_field);
+                }
+            }
+        }
 
-        // Finalize generics with additional parameters
-        let mut gs = self.generics.to_syn_generics();
-        gs.params.extend(generics_params);
+        // Preserve the original where clause, which is important for bounds like for<'de>
+        let where_clause = self.generics.get_where_clause().clone();
+        
+        // Finalize generics with all parameters
+        let mut generics = syn::Generics {
+            lt_token: if generics_params.is_empty() { None } else { Some(Default::default()) },
+            params: syn::punctuated::Punctuated::new(),
+            gt_token: if generics_params.is_empty() { None } else { Some(Default::default()) },
+            where_clause,
+        };
+        
+        // Add all generics params
+        for param in generics_params {
+            generics.params.push(param);
+        }
 
         // Construct the struct
         syn::ItemStruct {
@@ -362,12 +539,7 @@ impl ContextInfo {
                 span: proc_macro2::Span::call_site(),
             },
             ident: self.name.clone(),
-            generics: syn::Generics {
-                lt_token: Some(Default::default()),
-                params: gs.params,
-                gt_token: Some(Default::default()),
-                where_clause: self.generics.get_where_clause(),
-            },
+            generics,
             fields: syn::Fields::Named(syn::FieldsNamed {
                 brace_token: Default::default(),
                 named: syn::punctuated::Punctuated::from_iter(fields),

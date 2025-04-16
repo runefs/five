@@ -31,9 +31,9 @@ impl Compiled<ModuleInfo> for CompiledModule {
         // Get generics from the context base struct
         let (_impl_generics, ty_generics, _where_clausee) = context.base.generics.split_for_impl();
 
-        // Update the impl blocks to implement the renamed trait
+        // Update the impl blocks to implement the renamed trait with generics
         for impl_block in &mut context.context_methods {
-            impl_block.implemented_traits = vec![syn::parse_quote!(#trait_name)];
+            impl_block.implemented_traits = vec![syn::parse_quote!(#trait_name #ty_generics)];
             impl_block.self_ty = syn::parse_quote!(Context #ty_generics);
             impl_block.generics = GenericsInfo::from_syn_generics(&context.base.generics);
             impl_block.attrs = context.attrs.clone();
@@ -113,18 +113,37 @@ impl Compiled<ModuleInfo> for CompiledModule {
                     brace_token: syn::token::Brace::default(),
                     fields: {
                         let mut fields = syn::punctuated::Punctuated::new();
+                        
+                        // Add all non-phantom fields from parameters
                         for field_name in field_names.iter() {
-                            fields.push(syn::FieldValue {
-                                attrs: vec![],
-                                member: syn::Member::Named(field_name.as_ref().unwrap().clone()),
-                                colon_token: Some(syn::Token![:](proc_macro2::Span::call_site())),
-                                expr: syn::Expr::Path(syn::ExprPath {
+                            let field_name_str = field_name.as_ref().unwrap().to_string();
+                            if !field_name_str.starts_with("_phantom_") {
+                                fields.push(syn::FieldValue {
                                     attrs: vec![],
-                                    qself: None,
-                                    path: syn::Path::from(field_name.as_ref().unwrap().clone()),
-                                }),
-                            });
+                                    member: syn::Member::Named(field_name.as_ref().unwrap().clone()),
+                                    colon_token: Some(syn::Token![:](proc_macro2::Span::call_site())),
+                                    expr: syn::Expr::Path(syn::ExprPath {
+                                        attrs: vec![],
+                                        qself: None,
+                                        path: syn::Path::from(field_name.as_ref().unwrap().clone()),
+                                    }),
+                                });
+                            }
                         }
+                        
+                        // Add default PhantomData for phantom fields
+                        for field_name in field_names.iter() {
+                            let field_name_str = field_name.as_ref().unwrap().to_string();
+                            if field_name_str.starts_with("_phantom_") {
+                                fields.push(syn::FieldValue {
+                                    attrs: vec![],
+                                    member: syn::Member::Named(field_name.as_ref().unwrap().clone()),
+                                    colon_token: Some(syn::Token![:](proc_macro2::Span::call_site())),
+                                    expr: syn::parse_quote!(::std::marker::PhantomData),
+                                });
+                            }
+                        }
+                        
                         fields
                     },
                     dot2_token: None,
@@ -134,12 +153,21 @@ impl Compiled<ModuleInfo> for CompiledModule {
             )],
         };
 
-        let return_type: syn::ReturnType = syn::parse_quote!(-> impl #trait_name);
+        // Create appropriate return type with all generic parameters preserved
+        let return_type = {
+            let (_, type_generics, _) = context.base.generics.split_for_impl();
+            
+            syn::parse_quote!(-> impl #trait_name #type_generics)
+        };
 
         let params: Vec<ParameterInfo> = field_names
             .iter()
             .zip(field_types.iter())
-            .filter(|(name, _)| *name.as_ref().unwrap() != "self") // Filter out self parameter
+            .filter(|(name, _)| {
+                // Filter out self and _phantom_ parameters
+                let name_str = name.as_ref().unwrap().to_string();
+                *name.as_ref().unwrap() != "self" && !name_str.starts_with("_phantom_")
+            })
             .map(|(name, ty)| {
                 let param = ParameterInfo::Typed {
                     name: name.as_ref().unwrap().clone(),

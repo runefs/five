@@ -35,7 +35,9 @@ pub fn analyze_context(
     item_struct: &syn::ItemStruct,
     impl_blocks: &[syn::ItemImpl],
 ) -> ContextInfo {
+    
     let generics = analyze_generics(&syn::Item::Struct(item_struct.clone()));
+    
     let properties = item_struct
         .fields
         .iter()

@@ -56,11 +56,11 @@ async fn test_storage() {
     }
 
 
-    let store = storage::bind(Serialiser, Encrypter,InMemoryStore);
+    let store = storage::bind::<Data, Serialiser, Encrypter, InMemoryStore>(Serialiser, Encrypter,InMemoryStore);
     let key = "FirstKey";
     let data = Data { value: "a lot of very important data".to_string() };
     store.store(key.to_string(), &data).await.unwrap();
-    let data = store.retrieve::<Data>(key.to_string()).await.unwrap();
+    let data = store.retrieve(key.to_string()).await.unwrap();
     println!("Data: {:?}", data);
 }
 

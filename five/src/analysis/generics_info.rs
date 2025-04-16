@@ -125,6 +125,10 @@ fn extract_inline_where_clauses(item: &syn::Item) -> (Option<&Generics>, Vec<syn
             Some(&item_trait.generics),
             extract_inline_where_clauses_from_trait(item_trait),
         ),
+        syn::Item::Struct(item_struct) => (
+            Some(&item_struct.generics),
+            extract_inline_where_clauses_from_struct(item_struct),
+        ),
         _ => (None, Vec::new()),
     }
 }
@@ -207,4 +211,37 @@ pub fn extract_inline_where_clauses_from_signature(
             }
         })
         .collect()
+}
+
+fn extract_inline_where_clauses_from_struct(
+    item_struct: &syn::ItemStruct,
+) -> Vec<syn::WherePredicate> {
+    // Extract predicates from generic parameters similar to traits
+    let mut where_clauses: Vec<syn::WherePredicate> = item_struct
+        .generics
+        .params
+        .iter()
+        .filter_map(|param| {
+            if let syn::GenericParam::Type(type_param) = param {
+                Some(syn::WherePredicate::Type(syn::PredicateType {
+                    lifetimes: None,
+                    bounded_ty: syn::Type::Path(syn::TypePath {
+                        qself: None,
+                        path: type_param.ident.clone().into(),
+                    }),
+                    colon_token: Default::default(),
+                    bounds: type_param.bounds.clone(),
+                }))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Add any existing where clause predicates
+    if let Some(where_clause) = &item_struct.generics.where_clause {
+        where_clauses.extend(where_clause.predicates.clone());
+    }
+
+    where_clauses
 }
