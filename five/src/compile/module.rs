@@ -20,9 +20,25 @@ impl Compiled<ModuleInfo> for CompiledModule {
 
         // Create PascalCase trait name from module name
         let module_str = module_name.to_string();
+        
+        // Convert snake_case to PascalCase
+        let name = module_str.split('_')
+            .map(|part| {
+                if part.is_empty() {
+                    String::new()
+                } else {
+                    let mut chars = part.chars();
+                    match chars.next() {
+                        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                        None => String::new(),
+                    }
+                }
+            })
+            .collect::<String>();
+            
         let trait_name = syn::Ident::new(
-            &(module_str[0..1].to_uppercase() + &module_str[1..]),
-            module_name.span(),
+            &name,
+            module_name.span()
         );
 
         // Update the trait name to match the module name in PascalCase
