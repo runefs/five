@@ -43,8 +43,6 @@ impl EncrypterContract for Encrypter {
     }
 }
 
-
-
 #[async_trait::async_trait]
 impl StoreContract for InMemoryStore {
     async fn store(&self, key: String, data: Vec<u8>) -> Result<String, String> {
