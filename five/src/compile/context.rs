@@ -398,17 +398,27 @@ impl ContextInfo {
                     };
 
                     if is_role {
-                        // Non-primitive role type: use a generic parameter with a contract
-                        let contract_name = format!(
-                            "{}Contract",
-                            to_upper_camel_case(&prop.get_name().to_string())
-                        );
+                        // Get the role type name
+                        let role_type = match &prop.get_ty() {
+                            syn::Type::Path(type_path) => type_path.path.segments[0].ident.clone(),
+                            _ => panic!("Expected a Path type"),
+                        };
+                        
+                        // Try to find the role in our roles list
+                        let contract_ident = self.roles.iter()
+                            .find(|r| r.name == role_type)
+                            .map(|role| role.contract.name.clone())
+                            .unwrap_or_else(|| {
+                                // Fallback to naming convention if role or contract not found
+                                let base_name = role_type.to_string();
+                                let base_name = base_name.trim_end_matches("Role");
+                                syn::Ident::new(&format!("{}Contract", base_name), proc_macro2::Span::call_site())
+                            });
+                            
                         let generic_name = syn::Ident::new(
                             &format!("T{}", to_upper_camel_case(&prop.get_name().to_string())),
                             proc_macro2::Span::call_site(),
                         );
-                        let contract_ident =
-                            syn::Ident::new(&contract_name, proc_macro2::Span::call_site());
 
                         // Add the field generic parameter to our tracking list
                         field_generics.push(generic_name.clone());
@@ -534,7 +544,7 @@ impl ContextInfo {
         // Construct the struct
         syn::ItemStruct {
             attrs: vec![],
-            vis: syn::Visibility::Inherited,
+            vis: syn::parse_quote!(pub),
             struct_token: syn::token::Struct {
                 span: proc_macro2::Span::call_site(),
             },

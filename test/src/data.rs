@@ -8,7 +8,7 @@ pub mod data {
     /// See: https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UserProfile {
-        // Required
+        // Required 
         sub: String,
         
         // Optional standard claims
